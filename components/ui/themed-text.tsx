@@ -1,22 +1,21 @@
-import React from 'react'
-import { StyleSheet, Text, TextProps as TNTextProps } from 'react-native'
+import React from "react";
+import { StyleSheet, Text, TextProps as TNTextProps } from "react-native";
 
-interface TextProps extends TNTextProps {
-
-}
+interface TextProps extends TNTextProps {}
 
 function ThemedText({ children, style, ...props }: TextProps) {
-    return (
-        <Text style={[style, styles.text]} {...props}>
-            {children}
-        </Text>
-    )
+  return (
+    <Text style={[style, styles.text]} {...props}>
+      {children}
+    </Text>
+  );
 }
 
-export default ThemedText
+export default ThemedText;
 
 const styles = StyleSheet.create({
-    text: {
-        color: "#eee"
-    }
-})
+  text: {
+    fontFamily: "roboto",
+    color: "#eee",
+  },
+});

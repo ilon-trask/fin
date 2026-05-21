@@ -1,22 +1,27 @@
-import { SIZE } from '@/constants/tokens'
-import React from 'react'
-import { StyleSheet, TextInput, TextInputProps } from 'react-native'
+import { SIZE } from "@/constants/tokens";
+import React, { forwardRef } from "react";
+import { StyleSheet, TextInput, TextInputProps } from "react-native";
 
-interface InputProps extends TextInputProps {
+interface InputProps extends TextInputProps {}
 
-}
-
-function ThemedInput({ style, ...props }: InputProps) {
+const ThemedInput = forwardRef(
+  ({ style, ...props }: InputProps, ref: React.Ref<TextInput>) => {
     return (
-        <TextInput style={[styles.input, style]} {...props} placeholderTextColor={'#111'} />
-    )
-}
+      <TextInput
+        ref={ref}
+        placeholderTextColor={"#888"}
+        style={[styles.input, style]}
+        {...props}
+      />
+    );
+  },
+);
 
-export default ThemedInput
+export default ThemedInput;
 
 const styles = StyleSheet.create({
-    input: {
-        minHeight: SIZE["64"],
-        backgroundColor: '#eee'
-    }
-})
+  input: {
+    minHeight: SIZE["64"],
+    backgroundColor: "#eee",
+  },
+});
