@@ -5,7 +5,7 @@ interface TextProps extends TNTextProps {}
 
 function ThemedText({ children, style, ...props }: TextProps) {
   return (
-    <Text style={[style, styles.text]} {...props}>
+    <Text style={[styles.text, style]} {...props}>
       {children}
     </Text>
   );

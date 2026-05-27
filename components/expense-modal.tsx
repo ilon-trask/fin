@@ -7,6 +7,7 @@ import {
   View,
 } from "react-native";
 import Button from "./ui/button";
+import DatePickerAndTimePicker from "./ui/DatePickerAndTimePicker";
 import Modal from "./ui/modal";
 import ThemedInput from "./ui/themed-Input";
 import ThemedText from "./ui/themed-text";
@@ -63,7 +64,7 @@ function ExpenseModal({
           value={localExpense.amount.toString()}
           onChangeText={(e) => {
             let res: string | number = e;
-            if (res != "") {
+            if (res !== "") {
               res = +e;
               if (Number.isNaN(res)) {
                 return;
@@ -74,11 +75,10 @@ function ExpenseModal({
         />
       </View>
       <View style={styles.field}>
-        <ThemedText>Date</ThemedText>
-        <ThemedInput
+        <DatePickerAndTimePicker
           value={localExpense.date}
-          onChangeText={(e) =>
-            setLocalExpense((prev) => ({ ...prev, date: e }))
+          onChange={(date) =>
+            setLocalExpense((prev) => ({ ...prev, date: date.toISOString() }))
           }
         />
       </View>

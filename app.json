@@ -3,6 +3,7 @@
     "package": "com.myha.finsam"
   },
   "plugins": [
-    "expo-font"
+    "expo-font",
+    "@react-native-community/datetimepicker"
   ]
 }

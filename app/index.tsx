@@ -17,6 +17,11 @@ import "react-native-get-random-values";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { v4 as uuid } from "uuid";
 
+function formatExpenseDate(value: string) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
+}
+
 export default function Index() {
   const { height } = Dimensions.get("window");
   const [showExpenseModal, setShowExpenseModal] = useState(false);
@@ -38,10 +43,7 @@ export default function Index() {
   const [expense, setExpense] = useState<Expense>({
     id: uuid(),
     amount: 0.0,
-    date: (() => {
-      const date = new Date();
-      return date.toLocaleString();
-    })(),
+    date: new Date().toISOString(),
     categoryId: "0",
   });
 
@@ -49,10 +51,7 @@ export default function Index() {
     setExpense({
       id: uuid(),
       amount: 0.0,
-      date: (() => {
-        const date = new Date();
-        return date.toLocaleString();
-      })(),
+      date: new Date().toISOString(),
       categoryId,
     });
     setShowExpenseModal(true);
@@ -195,7 +194,7 @@ export default function Index() {
         <View style={{ width: "100%", gap: 8 }}>
           {expenses.toReversed().map((expense) => {
             const category = categories.find(
-              (cat) => cat.id == expense.categoryId,
+              (cat) => cat.id === expense.categoryId,
             );
             if (!category) throw new Error("no such category");
 
@@ -223,7 +222,7 @@ export default function Index() {
                     {category.name}
                   </ThemedText>
                   <ThemedText style={{ fontSize: 10 }}>
-                    {expense.date}
+                    {formatExpenseDate(expense.date)}
                   </ThemedText>
                 </View>
                 <View

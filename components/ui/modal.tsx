@@ -1,10 +1,9 @@
 import React from "react";
 import {
-    Pressable,
-    Modal as RNModal,
-    ModalProps as RNModalProps,
-    StyleSheet,
-    View,
+  Pressable,
+  Modal as RNModal,
+  ModalProps as RNModalProps,
+  StyleSheet
 } from "react-native";
 
 interface ModalProps extends RNModalProps {
@@ -22,8 +21,11 @@ function Modal({ onClose, showModal, style, children, ...props }: ModalProps) {
       visible={showModal}
     >
       <Pressable style={styles.bg} onPress={onClose}>
-        <Pressable onPress={(e) => e.stopPropagation()} style={{}}>
-          <View style={styles.content}>{children}</View>
+        <Pressable
+          onPress={(e) => e.stopPropagation()}
+          style={styles.container}
+        >
+          {children}
         </Pressable>
       </Pressable>
     </RNModal>
@@ -45,7 +47,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "rgba(0,0,0,0.4)",
   },
-  content: {
+  container: {
+    width: "80%",
     backgroundColor: "#111",
     justifyContent: "center",
     alignItems: "center",
