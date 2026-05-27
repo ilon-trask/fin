@@ -3,7 +3,7 @@ import ExpenseModal from "@/components/expense-modal";
 import Button from "@/components/ui/button";
 import ThemedText from "@/components/ui/themed-text";
 import { COLOR, SIZE } from "@/constants/tokens";
-import { StorageKeyKind, storageRead, storageSave } from "@/data/storage";
+import { StorageKeyKind, storageRead, storageSaveRaw } from "@/data/storage";
 import { Category, Expense } from "@/types/entities";
 import { useEffect, useState } from "react";
 import {
@@ -66,7 +66,7 @@ export default function Index() {
   const addExpense = (expense: Expense) => {
     setExpenses((prev) => {
       const data = [...prev, expense];
-      storageSave(StorageKeyKind.expenses, JSON.stringify(data));
+      storageSaveRaw(StorageKeyKind.expenses, JSON.stringify(data));
       return data;
     });
     setShowExpenseModal(false);
@@ -84,7 +84,7 @@ export default function Index() {
   const addCategory = (category: Category) => {
     setCategories((prev) => {
       const data = [...prev, category];
-      storageSave(StorageKeyKind.categories, JSON.stringify(data));
+      storageSaveRaw(StorageKeyKind.categories, JSON.stringify(data));
       return data;
     });
     setShowCategoryModal(false);
@@ -138,8 +138,8 @@ export default function Index() {
       const { category, ...rest } = exp;
       expenses.push({ ...rest, categoryId });
     });
-    storageSave(StorageKeyKind.categories, JSON.stringify(categories));
-    storageSave(StorageKeyKind.expenses, JSON.stringify(expenses));
+    storageSaveRaw(StorageKeyKind.categories, JSON.stringify(categories));
+    storageSaveRaw(StorageKeyKind.expenses, JSON.stringify(expenses));
     return expenses;
   }
 
