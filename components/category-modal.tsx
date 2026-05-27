@@ -34,6 +34,7 @@ function CategoryModal({ category, onSave, showModal, ...props }: ModalProps) {
       }, 100);
     }
   }, [showModal]);
+  
   return (
     <Modal showModal={showModal} {...props}>
       <View style={styles.field}>

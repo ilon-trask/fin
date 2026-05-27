@@ -86,36 +86,51 @@ export default function Index() {
 
   useEffect(() => {
     (async () => {
-      const categoriesRes = await storageRead<Category[]>(
-        StoreKeyKind.categories,
-      );
-      const expensesRes = await storageRead<Expense[]>(StoreKeyKind.expenses);
-      const [categoriesErr, categoriesData] = categoriesRes;
-      const [expensesErr, expensesData] = expensesRes;
-      if (categoriesErr) throw new Error("category read err");
-      if (expensesErr) throw new Error("expenses read err");
+      const categories = await storageRead<Category[]>(StoreKeyKind.categories);
+      const expenses = await storageRead<Expense[]>(StoreKeyKind.expenses);
 
-      setCategories(categoriesData);
-      setExpenses(expensesData);
+      setCategories(categories);
+      setExpenses(expenses);
     })();
   }, []);
 
-  async function exportFunc() {
-    const categoriesRes = await storageRead<Category[]>(
-      StoreKeyKind.categories,
-    );
-    const expensesRes = await storageRead<Expense[]>(StoreKeyKind.expenses);
-    const [categoriesErr, categoriesData] = categoriesRes;
-    const [expensesErr, expensesData] = expensesRes;
-    if (categoriesErr) throw new Error("category read err");
-    if (expensesErr) throw new Error("expenses read err");
+  async function exportData() {
+    const categories = await storageRead<Category[]>(StoreKeyKind.categories);
+    const expenses = await storageRead<Expense[]>(StoreKeyKind.expenses);
 
-    return expensesData.map((exp) => {
-      const category = categoriesData.find((el) => el.id == exp.categoryId);
-      //@ts-ignore
-      delete exp.categoryId;
-      return { ...exp, category: category?.name };
+    return expenses.map((exp) => {
+      const category = categories.find((el) => el.id === exp.categoryId);
+      let categoryName = "notFound";
+      if (category) {
+        categoryName = category.name;
+      }
+
+      const { categoryId, ...rest } = exp;
+      return { ...rest, category: categoryName };
     });
+  }
+
+  type ExpenseData = Omit<Expense, "categoryId"> & { category: string };
+
+  async function importData(rawData: string) {
+    const data: ExpenseData[] = JSON.parse(rawData);
+    const categories: Category[] = [];
+    const expenses: Expense[] = [];
+    data.forEach((exp) => {
+      /* eslint-disable */
+      let categoryId = categories.find(
+        (category) => category.name === exp.category,
+      )?.id;
+      /* eslint-enable */
+      if (!categoryId) {
+        categoryId = uuid();
+        categories.push({ id: categoryId, name: exp.category });
+      }
+
+      const { category, ...rest } = exp;
+      expenses.push({ ...rest, categoryId });
+    });
+    return expenses;
   }
 
   return (

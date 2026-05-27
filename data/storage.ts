@@ -1,5 +1,5 @@
-import { tryCatch } from "@/utils/tryCatch";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as z from "zod";
 
 export enum StoreKeyKind {
   categories = "categories",
@@ -10,23 +10,26 @@ type StoreKeyType = keyof typeof StoreKeyKind;
 
 const EMPTY_VALUE = "[]";
 
+const dataSchema = z.array(z.any());
+
 export async function storageSave(key: StoreKeyType, data: string) {
-  const [err] = await tryCatch(() => AsyncStorage.setItem(key, data));
-  if (err) throw err;
+  return AsyncStorage.setItem(key, data);
 }
 
 export async function storageReadRaw(key: StoreKeyType) {
-  const res = tryCatch<string | null>(() => AsyncStorage.getItem(key));
-  return res;
+  return AsyncStorage.getItem(key);
 }
 
-export async function storageRead<T>(key: StoreKeyType) {
-  let [err, rawData] = await storageReadRaw(key);
-  if (err) return [err, null] as const;
-  if (!rawData) {
+export async function storageRead<T extends unknown[]>(
+  key: StoreKeyType,
+): Promise<T> {
+  let data = await storageReadRaw(key);
+  if (!data) {
     storageSave(key, EMPTY_VALUE);
-    rawData = EMPTY_VALUE;
+    data = EMPTY_VALUE;
   }
-  const res = tryCatch<T>(() => JSON.parse(rawData));
-  return res;
+
+  const res = dataSchema.parse(JSON.parse(data));
+
+  return res as T;
 }
