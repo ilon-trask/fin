@@ -108,13 +108,9 @@ export default function Index() {
 
     return expenses.map((exp) => {
       const category = categories.find((el) => el.id === exp.categoryId);
-      let categoryName = "notFound";
-      if (category) {
-        categoryName = category.name;
-      }
 
       const { categoryId, ...rest } = exp;
-      return { ...rest, category: categoryName };
+      return { ...rest, category: category?.name || "notFound" };
     });
   }
 
@@ -125,14 +121,16 @@ export default function Index() {
     const categories: Category[] = [];
     const expenses: Expense[] = [];
     data.forEach((exp) => {
-      /* eslint-disable */
       let categoryId = categories.find(
         (category) => category.name === exp.category,
       )?.id;
-      /* eslint-enable */
       if (!categoryId) {
         categoryId = uuid();
-        categories.push({ id: categoryId, color: "rgb(111, 255, 0)", name: exp.category });
+        categories.push({
+          id: categoryId,
+          color: "rgb(111, 255, 0)",
+          name: exp.category,
+        });
       }
 
       const { category, ...rest } = exp;

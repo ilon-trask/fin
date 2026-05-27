@@ -8,13 +8,6 @@ module.exports = defineConfig([
     ignores: ["dist/*"],
     rules: {
       "no-throw-literal": "error",
-      "no-restricted-syntax": [
-        "warn",
-        {
-          selector: "ChainExpression",
-          message: "Optional chaining is not allowed.",
-        },
-      ],
     },
   },
 ]);
