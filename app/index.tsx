@@ -3,7 +3,7 @@ import ExpenseModal from "@/components/expense-modal";
 import Button from "@/components/ui/button";
 import ThemedText from "@/components/ui/themed-text";
 import { SIZE } from "@/constants/tokens";
-import { storageRead, storageSave, StoreKeyKind } from "@/data/storage";
+import { StorageKeyKind, storageRead, storageSave } from "@/data/storage";
 import { Category, Expense } from "@/types/entities";
 import { useEffect, useState } from "react";
 import {
@@ -61,7 +61,7 @@ export default function Index() {
   const addExpense = (expense: Expense) => {
     setExpenses((prev) => {
       const data = [...prev, expense];
-      storageSave(StoreKeyKind.expenses, JSON.stringify(data));
+      storageSave(StorageKeyKind.expenses, JSON.stringify(data));
       return data;
     });
     setShowExpenseModal(false);
@@ -78,7 +78,7 @@ export default function Index() {
   const addCategory = (category: Category) => {
     setCategories((prev) => {
       const data = [...prev, category];
-      storageSave(StoreKeyKind.categories, JSON.stringify(data));
+      storageSave(StorageKeyKind.categories, JSON.stringify(data));
       return data;
     });
     setShowCategoryModal(false);
@@ -86,8 +86,10 @@ export default function Index() {
 
   useEffect(() => {
     (async () => {
-      const categories = await storageRead<Category[]>(StoreKeyKind.categories);
-      const expenses = await storageRead<Expense[]>(StoreKeyKind.expenses);
+      const categories = await storageRead<Category[]>(
+        StorageKeyKind.categories,
+      );
+      const expenses = await storageRead<Expense[]>(StorageKeyKind.expenses);
 
       setCategories(categories);
       setExpenses(expenses);
@@ -95,8 +97,8 @@ export default function Index() {
   }, []);
 
   async function exportData() {
-    const categories = await storageRead<Category[]>(StoreKeyKind.categories);
-    const expenses = await storageRead<Expense[]>(StoreKeyKind.expenses);
+    const categories = await storageRead<Category[]>(StorageKeyKind.categories);
+    const expenses = await storageRead<Expense[]>(StorageKeyKind.expenses);
 
     return expenses.map((exp) => {
       const category = categories.find((el) => el.id === exp.categoryId);
@@ -130,6 +132,8 @@ export default function Index() {
       const { category, ...rest } = exp;
       expenses.push({ ...rest, categoryId });
     });
+    storageSave(StorageKeyKind.categories, JSON.stringify(categories));
+    storageSave(StorageKeyKind.expenses, JSON.stringify(expenses));
     return expenses;
   }
 

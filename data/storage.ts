@@ -1,27 +1,27 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as z from "zod";
 
-export enum StoreKeyKind {
+export enum StorageKeyKind {
   categories = "categories",
   expenses = "expenses",
 }
 
-type StoreKeyType = keyof typeof StoreKeyKind;
+type StorageKeyType = keyof typeof StorageKeyKind;
 
 const EMPTY_VALUE = "[]";
 
 const dataSchema = z.array(z.any());
 
-export async function storageSave(key: StoreKeyType, data: string) {
+export async function storageSave(key: StorageKeyType, data: string) {
   return AsyncStorage.setItem(key, data);
 }
 
-export async function storageReadRaw(key: StoreKeyType) {
+export async function storageReadRaw(key: StorageKeyType) {
   return AsyncStorage.getItem(key);
 }
 
 export async function storageRead<T extends unknown[]>(
-  key: StoreKeyType,
+  key: StorageKeyType,
 ): Promise<T> {
   let data = await storageReadRaw(key);
   if (!data) {
