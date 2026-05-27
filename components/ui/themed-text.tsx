@@ -15,7 +15,7 @@ export default ThemedText;
 
 const styles = StyleSheet.create({
   text: {
-    fontFamily: "roboto",
+    fontFamily: "Google-Sans-Code",
     color: "#eee",
   },
 });

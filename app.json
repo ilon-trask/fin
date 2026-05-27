@@ -1,5 +1,8 @@
 {
   "android": {
     "package": "com.myha.finsam"
-  }
+  },
+  "plugins": [
+    "expo-font"
+  ]
 }
