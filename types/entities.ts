@@ -1,11 +1,12 @@
-
 export interface Category {
-    id: string, name: string
+  id: string;
+  name: string;
+  color: string;
 }
 
 export interface Expense {
-    id: string,
-    amount: number,
-    date: string,
-    categoryId: string
+  id: string;
+  amount: number;
+  date: string;
+  categoryId: string;
 }

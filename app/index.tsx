@@ -27,17 +27,23 @@ export default function Index() {
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [categories, setCategories] = useState<Category[]>([
-    { id: "1", name: "food" },
-    { id: "2", name: "clodth" },
-    { id: "3", name: "dönner" },
-    { id: "4", name: "electronics" },
+    { id: "1", color: "rgb(43, 255, 0)", name: "food" },
+    { id: "2", color: "rgb(255, 187, 0)", name: "clodth" },
+    { id: "3", color: "rgb(0, 149, 255)", name: "dönner" },
+    { id: "4", color: "rgb(0, 42, 255)", name: "electronics" },
   ]);
   const [category, setCategory] = useState<Category>({
     id: uuid(),
+    color: "rgb(255, 0, 128)",
     name: "",
   });
   const [expenses, setExpenses] = useState<Expense[]>([
-    { id: "1", amount: 8.0, categoryId: "3", date: "18/05/2026, 01:06:33" },
+    {
+      id: "1",
+      amount: 8.0,
+      categoryId: "3",
+      date: "18/05/2026, 01:06:33",
+    },
   ]);
 
   const [expense, setExpense] = useState<Expense>({
@@ -69,6 +75,7 @@ export default function Index() {
   const showCategoryModalFunc = () => {
     setCategory({
       id: uuid(),
+      color: "rgb(201, 143, 50)",
       name: "",
     });
     setShowCategoryModal(true);
@@ -125,7 +132,7 @@ export default function Index() {
       /* eslint-enable */
       if (!categoryId) {
         categoryId = uuid();
-        categories.push({ id: categoryId, name: exp.category });
+        categories.push({ id: categoryId, color: "rgb(111, 255, 0)", name: exp.category });
       }
 
       const { category, ...rest } = exp;
