@@ -1,3 +1,4 @@
+import { COLOR } from "@/constants/tokens";
 import DateTimePicker, {
     DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
@@ -130,19 +131,19 @@ const styles = StyleSheet.create({
   },
   input: {
     minHeight: 48,
-    backgroundColor: "#eee",
+    backgroundColor: COLOR.text,
     justifyContent: "center",
     paddingHorizontal: 12,
   },
   inputText: {
-    color: "#111",
+    color: COLOR.bg,
   },
   picker: {
     width: "100%",
   },
   doneButton: {
     alignSelf: "flex-end",
-    backgroundColor: "#cfda00",
+    backgroundColor: COLOR.primary,
     paddingHorizontal: 16,
     paddingVertical: 10,
   },

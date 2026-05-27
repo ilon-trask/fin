@@ -1,9 +1,10 @@
+import { COLOR } from "@/constants/tokens";
 import React from "react";
 import {
   Pressable,
   Modal as RNModal,
   ModalProps as RNModalProps,
-  StyleSheet
+  StyleSheet,
 } from "react-native";
 
 interface ModalProps extends RNModalProps {
@@ -37,7 +38,7 @@ export default Modal;
 const styles = StyleSheet.create({
   modal: {
     flex: 1,
-    backgroundColor: "#111",
+    backgroundColor: COLOR.surface,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -49,7 +50,7 @@ const styles = StyleSheet.create({
   },
   container: {
     width: "80%",
-    backgroundColor: "#111",
+    backgroundColor: COLOR.surface,
     justifyContent: "center",
     alignItems: "center",
     gap: 8,

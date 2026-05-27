@@ -1,3 +1,4 @@
+import { COLOR } from "@/constants/tokens";
 import React from "react";
 import { StyleSheet, Text, TextProps as TNTextProps } from "react-native";
 
@@ -16,6 +17,6 @@ export default ThemedText;
 const styles = StyleSheet.create({
   text: {
     fontFamily: "Google-Sans-Code",
-    color: "#eee",
+    color: COLOR.text,
   },
 });

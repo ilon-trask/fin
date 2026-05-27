@@ -2,7 +2,7 @@ import CategoryModal from "@/components/category-modal";
 import ExpenseModal from "@/components/expense-modal";
 import Button from "@/components/ui/button";
 import ThemedText from "@/components/ui/themed-text";
-import { SIZE } from "@/constants/tokens";
+import { COLOR, SIZE } from "@/constants/tokens";
 import { StorageKeyKind, storageRead, storageSave } from "@/data/storage";
 import { Category, Expense } from "@/types/entities";
 import { useEffect, useState } from "react";
@@ -263,6 +263,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#111",
+    backgroundColor: COLOR.bg,
   },
 });
