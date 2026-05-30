@@ -26,14 +26,14 @@ export default function Main() {
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [categories, setCategories] = useState<Category[]>([
-    { id: "1", color: "#2bff00", name: "food" },
-    { id: "2", color: "#ffbb00", name: "clodth" },
-    { id: "3", color: "#0095ff", name: "dönner" },
-    { id: "4", color: "#002aff", name: "electronics" },
+    { id: "1", color: "rgb(43, 255, 0)", name: "food" },
+    { id: "2", color: "rgb(255, 187, 0)", name: "clodth" },
+    { id: "3", color: "rgb(0, 149, 255)", name: "dönner" },
+    { id: "4", color: "rgb(0, 42, 255)", name: "electronics" },
   ]);
   const [category, setCategory] = useState<Category>({
     id: uuid(),
-    color: "#ff0080",
+    color: "rgb(255, 0, 0)",
     name: "",
   });
   const [expenses, setExpenses] = useState<Expense[]>([
@@ -74,7 +74,7 @@ export default function Main() {
   const showCategoryModalFunc = () => {
     setCategory({
       id: uuid(),
-      color: "#c98f32",
+      color: "rgb(255,0,0)",
       name: "",
     });
     setShowCategoryModal(true);
@@ -105,7 +105,7 @@ export default function Main() {
     <SafeAreaView style={styles.main}>
       <ScrollView style={{ width: "100%" }}>
         <View style={{ height: height * 0.4 }}>
-          <View style={{ alignSelf: "flex-end"}}>
+          <View style={{ alignSelf: "flex-end" }}>
             <View>
               <ThemedText style={{ fontSize: 24 }}>
                 {new Date().toLocaleString("default", { month: "long" })}

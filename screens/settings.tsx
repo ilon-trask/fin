@@ -7,7 +7,7 @@ import { Dimensions, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { v4 as uuid } from "uuid";
 
-export default function Settings() {
+export default function Settings(props: any) {
   async function exportData() {
     const categories = await storageRead<Category[]>(StorageKeyKind.categories);
     const expenses = await storageRead<Expense[]>(StorageKeyKind.expenses);
@@ -56,6 +56,10 @@ export default function Settings() {
         height,
       }}
     >
+      <View
+        onTouchStart={props.disableParentScroll}
+        onTouchEnd={props.enableParentScroll}
+      ></View>
       <View style={{ flexDirection: "row", gap: 16 }}>
         <Button>
           <ThemedText>Import</ThemedText>

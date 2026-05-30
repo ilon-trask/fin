@@ -6,6 +6,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import ColorPicker from "./color-picker";
 import Button from "./ui/button";
 import Modal from "./ui/modal";
 import ThemedInput from "./ui/themed-Input";
@@ -20,10 +21,14 @@ interface ModalProps extends RNModalProps {
 
 function CategoryModal({ category, onSave, showModal, ...props }: ModalProps) {
   const [localCategory, setLocalCategory] = useState<Category>(category);
-
+  const giveColor = (color: string) =>
+    setLocalCategory((prev) => ({ ...prev, color }));
   useEffect(() => {
+    console.log(category);
+
     setLocalCategory(category);
   }, [category]);
+
   const nameInputRef = useRef<TextInput>(null);
 
   useEffect(() => {
@@ -34,22 +39,30 @@ function CategoryModal({ category, onSave, showModal, ...props }: ModalProps) {
       }, 100);
     }
   }, [showModal]);
-  
+
+  const save = (data: Category) => {
+    if (data.name) onSave(data);
+  };
+
   return (
     <Modal showModal={showModal} {...props}>
       <View style={styles.field}>
-        <ThemedText>Amount</ThemedText>
+        <ThemedText style={{ color: localCategory.color }}>Color</ThemedText>
+        <ColorPicker giveColor={giveColor} />
+      </View>
+      <View style={styles.field}>
+        <ThemedText>Name</ThemedText>
         <ThemedInput
           ref={nameInputRef}
           placeholder="döner"
           value={localCategory.name}
-          onSubmitEditing={() => onSave(localCategory)}
+          onSubmitEditing={() => save(localCategory)}
           onChangeText={(e) =>
             setLocalCategory((prev) => ({ ...prev, name: e }))
           }
         />
       </View>
-      <Button onPress={() => onSave(localCategory)}>
+      <Button onPress={() => save(localCategory)}>
         <ThemedText>Save</ThemedText>
       </Button>
     </Modal>

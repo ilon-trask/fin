@@ -1,6 +1,6 @@
 import Main from "@/screens/main";
 import Settings from "@/screens/settings";
-import React from "react";
+import React, { useState } from "react";
 import { FlatList, StyleSheet, useWindowDimensions, View } from "react-native";
 
 function Divider() {
@@ -13,6 +13,7 @@ const data = [
 ];
 export default function Index() {
   const { width, height } = useWindowDimensions();
+  const [scrollEnabled, setScrollEnabled] = useState(true);
 
   return (
     <View style={{ flex: 1 }}>
@@ -20,6 +21,7 @@ export default function Index() {
         style={styles.list}
         data={data}
         keyExtractor={(item) => item.id}
+        scrollEnabled={scrollEnabled}
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
@@ -28,7 +30,12 @@ export default function Index() {
         snapToInterval={width}
         renderItem={({ item }) => (
           <View style={[styles.slide, { width, minHeight: height }]}>
-            <item.element />
+            <item.element
+              disableParentScroll={() => {
+                setScrollEnabled(false);
+              }}
+              enableParentScroll={() => setScrollEnabled(true)}
+            />
           </View>
         )}
       />
