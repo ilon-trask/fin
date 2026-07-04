@@ -3,10 +3,6 @@ import Settings from "@/screens/settings";
 import React, { useState } from "react";
 import { FlatList, StyleSheet, useWindowDimensions, View } from "react-native";
 
-function Divider() {
-  return <View> divider</View>;
-}
-
 const data = [
   { id: "1", title: "Main", element: Main },
   { id: "2", title: "Settings", element: Settings },
