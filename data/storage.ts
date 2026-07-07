@@ -16,7 +16,7 @@ export enum StorageKeyKind {
 
 type StorageKeyType = keyof typeof StorageKeyKind;
 
-const EMPTY_VALUE = `{ "version": ${VERSION}, "data":[] }`;
+const EMPTY_VALUE = JSON.stringify({ version: VERSION, data: [] });
 
 const dataSchema = z.array(z.any());
 const storageSchema = z.object({ version: z.string(), data: dataSchema });
@@ -29,21 +29,40 @@ export async function storageReadRaw(key: StorageKeyType) {
   return AsyncStorage.getItem(key);
 }
 
-export async function storageSave(key: StorageKeyType, data: string) {
-  const storage: StorageData<any> = { version: VERSION, data };
+export async function storageSave<T extends unknown[]>(
+  key: StorageKeyType,
+  data: T,
+) {
+  const storage: StorageData<T> = { version: VERSION, data };
   return AsyncStorage.setItem(key, JSON.stringify(storage));
 }
 
 export async function storageRead<T extends unknown[]>(
   key: StorageKeyType,
 ): Promise<T> {
-  let storage = await storageReadRaw(key);
-  let [err, value] = tryCatch(() => storageSchema.parse(JSON.parse(storage!)));
-  if (err || value?.version !== VERSION) {
-    storageSaveRaw(key, EMPTY_VALUE);
-    value = JSON.parse(EMPTY_VALUE);
-  }
-  const data = value!.data;
+  const storage = await storageReadRaw(key);
 
-  return data as T;
+  if (!storage) {
+    await storageSaveRaw(key, EMPTY_VALUE);
+    return [] as unknown as T;
+  }
+
+  const [parseErr, parsed] = tryCatch(() => JSON.parse(storage));
+  if (parseErr) {
+    await storageSaveRaw(key, EMPTY_VALUE);
+    return [] as unknown as T;
+  }
+
+  if (Array.isArray(parsed)) {
+    await storageSave(key, parsed as T);
+    return parsed as T;
+  }
+
+  const [err, value] = tryCatch(() => storageSchema.parse(parsed));
+  if (err || value?.version !== VERSION) {
+    await storageSaveRaw(key, EMPTY_VALUE);
+    return [] as unknown as T;
+  }
+
+  return value!.data as T;
 }

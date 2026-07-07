@@ -38,7 +38,7 @@ function ExpenseModal({
   useEffect(() => {
     if (showModal) {
       setTimeout(() => {
-        if (!amountInputRef.current) throw new Error("no amountInputRef");
+        if (!amountInputRef.current) return;
         amountInputRef.current.focus();
       }, 100);
     }
@@ -62,15 +62,16 @@ function ExpenseModal({
           placeholder="0.00"
           onSubmitEditing={() => onSave(localExpense)}
           value={localExpense.amount.toString()}
-          onChangeText={(e) => {
-            let res: string | number = e;
-            if (res !== "") {
-              res = +e;
-              if (Number.isNaN(res)) {
-                return;
-              }
+          onChangeText={(text) => {
+            if (text === "") {
+              setLocalExpense((prev) => ({ ...prev, amount: 0 }));
+              return;
             }
-            setLocalExpense((prev) => ({ ...prev, amount: res as number }));
+
+            const amount = Number(text);
+            if (Number.isNaN(amount)) return;
+
+            setLocalExpense((prev) => ({ ...prev, amount }));
           }}
         />
       </View>

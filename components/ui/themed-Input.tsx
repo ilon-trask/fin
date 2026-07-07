@@ -2,7 +2,7 @@ import { COLOR, SIZE } from "@/constants/tokens";
 import React, { forwardRef } from "react";
 import { StyleSheet, TextInput, TextInputProps } from "react-native";
 
-interface InputProps extends TextInputProps {}
+type InputProps = TextInputProps;
 
 const ThemedInput = forwardRef(function TemedInput(
   { style, ...props }: InputProps,

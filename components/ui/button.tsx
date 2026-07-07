@@ -2,7 +2,7 @@ import { COLOR, SIZE } from "@/constants/tokens";
 import React from "react";
 import { Pressable, PressableProps, StyleSheet } from "react-native";
 
-interface ButtonProps extends PressableProps {}
+type ButtonProps = PressableProps;
 
 function Button({ children, style, ...props }: ButtonProps) {
   return (

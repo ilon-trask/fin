@@ -15,7 +15,7 @@ import ThemedText from "./ui/themed-text";
 interface ModalProps extends RNModalProps {
   showModal: boolean;
   onClose: () => void;
-  onSave: (expense: Category) => void;
+  onSave: (category: Category) => void;
   category: Category;
 }
 
@@ -24,8 +24,6 @@ function CategoryModal({ category, onSave, showModal, ...props }: ModalProps) {
   const giveColor = (color: string) =>
     setLocalCategory((prev) => ({ ...prev, color }));
   useEffect(() => {
-    console.log(category);
-
     setLocalCategory(category);
   }, [category]);
 
@@ -34,7 +32,7 @@ function CategoryModal({ category, onSave, showModal, ...props }: ModalProps) {
   useEffect(() => {
     if (showModal) {
       setTimeout(() => {
-        if (!nameInputRef.current) throw new Error("no amountInputRef");
+        if (!nameInputRef.current) return;
         nameInputRef.current.focus();
       }, 100);
     }

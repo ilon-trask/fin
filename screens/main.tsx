@@ -2,7 +2,7 @@ import CategoryModal from "@/components/category-modal";
 import ExpenseModal from "@/components/expense-modal";
 import ThemedText from "@/components/ui/themed-text";
 import { COLOR, SIZE } from "@/constants/tokens";
-import { StorageKeyKind, storageRead, storageSaveRaw } from "@/data/storage";
+import { StorageKeyKind, storageRead, storageSave } from "@/data/storage";
 import { Category, Expense } from "@/types/entities";
 import { useEffect, useState } from "react";
 import {
@@ -65,7 +65,7 @@ export default function Main() {
   const addExpense = (expense: Expense) => {
     setExpenses((prev) => {
       const data = [...prev, expense];
-      storageSaveRaw(StorageKeyKind.expenses, JSON.stringify(data));
+      storageSave(StorageKeyKind.expenses, data);
       return data;
     });
     setShowExpenseModal(false);
@@ -83,7 +83,7 @@ export default function Main() {
   const addCategory = (category: Category) => {
     setCategories((prev) => {
       const data = [...prev, category];
-      storageSaveRaw(StorageKeyKind.categories, JSON.stringify(data));
+      storageSave(StorageKeyKind.categories, data);
       return data;
     });
     setShowCategoryModal(false);
@@ -111,7 +111,7 @@ export default function Main() {
                 {new Date().toLocaleString("default", { month: "long" })}
               </ThemedText>
               <ThemedText style={{ fontSize: 64 }}>
-                {expenses.reduce((pr, exp) => exp.amount, 0)}
+                {expenses.reduce((total, exp) => total + exp.amount, 0)}
               </ThemedText>
             </View>
           </View>
@@ -150,7 +150,6 @@ export default function Main() {
             const category = categories.find(
               (cat) => cat.id === expense.categoryId,
             );
-            if (!category) throw new Error("no such category");
 
             return (
               <View
@@ -173,7 +172,7 @@ export default function Main() {
                 </View>
                 <View style={{ flex: 1, marginStart: 8 }}>
                   <ThemedText style={{ fontSize: 18 }}>
-                    {category.name}
+                    {category?.name ?? "Unknown"}
                   </ThemedText>
                   <ThemedText style={{ fontSize: 10 }}>
                     {formatExpenseDate(expense.date)}
