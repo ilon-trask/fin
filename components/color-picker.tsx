@@ -63,10 +63,13 @@ export default function ColorPicker({
 
     giveColor(color);
   };
-  const ref: React.Ref<View> = useRef(null);
-  ref.current?.measure((x, y, width, height, pageX) => {
-    if (!left) setLeft(pageX);
-  });
+  const ref = useRef<View>(null);
+
+  const updateLayout = () => {
+    ref.current?.measure((_x, _y, _width, _height, pageX) => {
+      setLeft(pageX);
+    });
+  };
   return (
     <Pressable
       ref={ref}
@@ -74,6 +77,7 @@ export default function ColorPicker({
       pointerEvents="auto"
       onLayout={(e) => {
         setWidth(e.nativeEvent.layout.width);
+        updateLayout();
       }}
       onTouchStart={getX}
       onTouchMove={getX}
