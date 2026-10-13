@@ -9,4 +9,6 @@ export interface Expense {
   amount: number;
   date: string;
   categoryId: string;
+  currency?: string;
+  sourcePaymentId?: string;
 }

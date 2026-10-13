@@ -1,4 +1,3 @@
-import { COLOR } from "@/constants/tokens";
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useRef, useState } from "react";
 import {
@@ -7,7 +6,6 @@ import {
     StyleSheet,
     View,
 } from "react-native";
-import ThemedText from "./ui/themed-text";
 
 const colors = [
   [255, 0, 0], // red
@@ -78,19 +76,21 @@ export default function ColorPicker({
       onTouchStart={getX}
       onTouchMove={getX}
     >
-      <ThemedText
+      <View
         pointerEvents="none"
         style={{
-          marginTop: -4,
-          fontSize: 20,
-          color: COLOR.text,
+          top: -4,
+          width: 28,
+          height: 28,
+          borderRadius: 14,
+          borderWidth: 3,
+          borderColor: "#FAFAF8",
+          backgroundColor: "transparent",
           position: "absolute",
           zIndex: 2,
-          left: x - 2,
+          left: Math.max(0, Math.min(x - 14, width - 28)),
         }}
-      >
-        []
-      </ThemedText>
+      />
       <LinearGradient
         style={styles.gradient}
         start={{ x: 0, y: 0.5 }}
@@ -102,6 +102,6 @@ export default function ColorPicker({
 }
 
 const styles = StyleSheet.create({
-  container: { height: 20, width: 200, position: "relative" },
-  gradient: { height: 20, width: 200, position: "absolute" },
+  container: { height: 20, width: "100%", position: "relative" },
+  gradient: { height: 20, width: "100%", position: "absolute", borderRadius: 10 },
 });

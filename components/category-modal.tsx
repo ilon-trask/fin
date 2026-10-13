@@ -2,7 +2,6 @@ import { Category } from "@/types/entities";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ModalProps as RNModalProps,
-  StyleSheet,
   TextInput,
   View,
 } from "react-native";
@@ -11,6 +10,7 @@ import Button from "./ui/button";
 import Modal from "./ui/modal";
 import ThemedInput from "./ui/themed-Input";
 import ThemedText from "./ui/themed-text";
+import { dialogStyles as styles } from "./ui/dialog-styles";
 
 interface ModalProps extends RNModalProps {
   showModal: boolean;
@@ -45,14 +45,20 @@ function CategoryModal({ category, onSave, showModal, ...props }: ModalProps) {
   };
 
   return (
-    <Modal showModal={showModal} {...props}>
+    <Modal showModal={showModal} {...props} title="Add category">
       <View style={styles.field}>
-        <ThemedText style={{ color: localCategory.color }}>Color</ThemedText>
-        <ColorPicker giveColor={giveColor} />
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <ThemedText style={styles.label}>Color</ThemedText>
+          <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: localCategory.color }} />
+        </View>
+        <View style={{ paddingVertical: 12 }}>
+          <ColorPicker giveColor={giveColor} />
+        </View>
       </View>
       <View style={styles.field}>
-        <ThemedText>Name</ThemedText>
+        <ThemedText style={styles.label}>Name</ThemedText>
         <ThemedInput
+          style={styles.input}
           ref={nameInputRef}
           placeholder="döner"
           value={localCategory.name}
@@ -62,18 +68,11 @@ function CategoryModal({ category, onSave, showModal, ...props }: ModalProps) {
           }
         />
       </View>
-      <Button onPress={() => save(localCategory)}>
-        <ThemedText>Save</ThemedText>
+      <Button style={styles.save} onPress={() => save(localCategory)}>
+        <ThemedText style={styles.saveText}>Save</ThemedText>
       </Button>
     </Modal>
   );
 }
 
 export default CategoryModal;
-
-const styles = StyleSheet.create({
-  field: {
-    width: "100%",
-    gap: 4,
-  },
-});

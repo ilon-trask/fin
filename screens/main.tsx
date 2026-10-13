@@ -1,11 +1,16 @@
+import Button from "@/components/ui/button";
+import { googlePay, PaymentDraft } from "@/integrations/google-pay";
+import * as Linking from "expo-linking";
 import CategoryModal from "@/components/category-modal";
 import ExpenseModal from "@/components/expense-modal";
 import ThemedText from "@/components/ui/themed-text";
 import { COLOR, SIZE } from "@/constants/tokens";
 import { StorageKeyKind, storageRead, storageSaveRaw } from "@/data/storage";
 import { Category, Expense } from "@/types/entities";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
+    Alert,
+    AppState,
     Dimensions,
     Pressable,
     ScrollView,
@@ -23,6 +28,12 @@ function formatExpenseDate(value: string) {
 
 export default function Main() {
   const { height } = Dimensions.get("window");
+  const [payments, setPayments] = useState<PaymentDraft[]>([]);
+  const [paymentDescription, setPaymentDescription] = useState<string>();
+  const paymentUrl = Linking.useURL();
+  const [ready, setReady] = useState(false);
+  const savingRef = useRef(false);
+  const [openedPaymentId, setOpenedPaymentId] = useState<string>();
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [categories, setCategories] = useState<Category[]>([
@@ -53,6 +64,7 @@ export default function Main() {
   });
 
   const showExpenseModalFunc = (categoryId: string) => {
+    setPaymentDescription(undefined);
     setExpense({
       id: uuid(),
       amount: 0.0,
@@ -62,13 +74,34 @@ export default function Main() {
     setShowExpenseModal(true);
   };
 
-  const addExpense = (expense: Expense) => {
-    setExpenses((prev) => {
-      const data = [...prev, expense];
-      storageSaveRaw(StorageKeyKind.expenses, JSON.stringify(data));
-      return data;
+  const reviewPayment = (payment: PaymentDraft) => {
+    setPaymentDescription(payment.description);
+    setExpense({
+      id: uuid(), amount: payment.amount, date: payment.date,
+      currency: payment.currency, sourcePaymentId: payment.id, categoryId: "",
     });
-    setShowExpenseModal(false);
+    setShowExpenseModal(true);
+  };
+
+  const addExpense = async (expense: Expense) => {
+    if (savingRef.current || !ready || !Number.isFinite(expense.amount) || expense.amount <= 0
+      || !categories.some((category) => category.id === expense.categoryId)) return;
+    savingRef.current = true;
+    try {
+      // Also protects against a stale reminder following a save or app restart.
+      const stored = await storageRead<Expense[]>(StorageKeyKind.expenses);
+      const duplicate = expense.sourcePaymentId && stored.some((item) => item.sourcePaymentId === expense.sourcePaymentId);
+      const data = duplicate ? stored : [...stored, expense];
+      await storageSaveRaw(StorageKeyKind.expenses, JSON.stringify(data));
+      setExpenses(data);
+      if (expense.sourcePaymentId) {
+        googlePay.dismiss(expense.sourcePaymentId);
+        setPayments(googlePay.pending());
+      }
+      setShowExpenseModal(false);
+    } catch {
+      Alert.alert("Payment was not saved", "Please try again.");
+    } finally { savingRef.current = false; }
   };
 
   const showCategoryModalFunc = () => {
@@ -98,21 +131,73 @@ export default function Main() {
 
       setCategories(categories);
       setExpenses(expenses);
+      setReady(true);
     })();
   }, []);
+
+  useEffect(() => {
+    const refresh = () => {
+      const pending = googlePay.pending();
+      if (!ready) return;
+      pending.filter((payment) => expenses.some((item) => item.sourcePaymentId === payment.id))
+        .forEach((payment) => googlePay.dismiss(payment.id));
+      setPayments(googlePay.pending());
+    };
+    refresh();
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") refresh();
+    });
+    // The native listener also runs while this screen is active.
+    const timer = setInterval(refresh, 3000);
+    return () => { subscription.remove(); clearInterval(timer); };
+  }, [ready, expenses]);
+
+  useEffect(() => {
+    if (!ready || !paymentUrl) return;
+    const id = Linking.parse(paymentUrl).queryParams?.paymentId;
+    if (typeof id !== "string" || id === openedPaymentId) return;
+    const payment = payments.find((item) => item.id === id);
+    if (payment) {
+      // Synchronize the form with an external Android notification deep link.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      reviewPayment(payment);
+      setOpenedPaymentId(id);
+    }
+  }, [ready, paymentUrl, payments, openedPaymentId]);
+
+  const totals = expenses.reduce<Record<string, number>>((result, expense) => {
+    const currency = expense.currency ?? "";
+    result[currency] = (result[currency] ?? 0) + expense.amount;
+    return result;
+  }, {});
 
   return (
     <SafeAreaView style={styles.main}>
       <ScrollView style={{ width: "100%" }}>
+        {payments.map((payment) => (
+          <View key={payment.id} style={{ padding: 12, gap: 8, marginBottom: 12, backgroundColor: COLOR.surface }}>
+            <ThemedText>Google Pay · {payment.currency} {payment.amount.toFixed(2)}</ThemedText>
+            <ThemedText>{payment.description}</ThemedText>
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              <Button onPress={() => reviewPayment(payment)}><ThemedText>Add payment</ThemedText></Button>
+              <Button onPress={() => {
+                googlePay.dismiss(payment.id);
+                setPayments(googlePay.pending());
+              }}><ThemedText>Dismiss</ThemedText></Button>
+            </View>
+          </View>
+        ))}
         <View style={{ height: height * 0.4 }}>
           <View style={{ alignSelf: "flex-end" }}>
             <View>
               <ThemedText style={{ fontSize: 24 }}>
                 {new Date().toLocaleString("default", { month: "long" })}
               </ThemedText>
-              <ThemedText style={{ fontSize: 64 }}>
-                {expenses.reduce((pr, exp) => exp.amount, 0)}
-              </ThemedText>
+              {(Object.entries(totals).length ? Object.entries(totals) : [["", 0]]).map(([currency, total]) => (
+                <ThemedText key={currency} style={{ fontSize: 48 }}>
+                  {currency} {Number(total).toFixed(2)}
+                </ThemedText>
+              ))}
             </View>
           </View>
 
@@ -150,7 +235,7 @@ export default function Main() {
             const category = categories.find(
               (cat) => cat.id === expense.categoryId,
             );
-            if (!category) throw new Error("no such category");
+
 
             return (
               <View
@@ -173,7 +258,7 @@ export default function Main() {
                 </View>
                 <View style={{ flex: 1, marginStart: 8 }}>
                   <ThemedText style={{ fontSize: 18 }}>
-                    {category.name}
+                    {category?.name ?? "Uncategorized"}
                   </ThemedText>
                   <ThemedText style={{ fontSize: 10 }}>
                     {formatExpenseDate(expense.date)}
@@ -185,7 +270,7 @@ export default function Main() {
                     height: 20,
                   }}
                 >
-                  <ThemedText>{expense.amount}</ThemedText>
+                  <ThemedText>{expense.currency} {expense.amount}</ThemedText>
                 </View>
               </View>
             );
@@ -201,11 +286,14 @@ export default function Main() {
         onSave={addCategory}
       />
       <ExpenseModal
+        key={`${expense.id}:${showExpenseModal}`}
         showModal={showExpenseModal}
         onClose={() => {
           setShowExpenseModal(false);
         }}
         expense={expense}
+        categories={expense.sourcePaymentId ? categories : undefined}
+        description={paymentDescription}
         onSave={addExpense}
       />
     </SafeAreaView>

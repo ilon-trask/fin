@@ -5,6 +5,7 @@ import DateTimePicker, {
 import React, { useEffect, useMemo, useState } from "react";
 import { Platform, Pressable, StyleSheet, View, ViewStyle } from "react-native";
 import ThemedText from "./themed-text";
+import { dialogStyles } from "./dialog-styles";
 
 type PickerMode = "date" | "time";
 
@@ -74,7 +75,7 @@ function DatePickerAndTimePicker({
     <View style={[styles.container, style]}>
       <View style={styles.row}>
         <View style={styles.field}>
-          <ThemedText>{dateLabel}</ThemedText>
+          <ThemedText style={dialogStyles.label}>{dateLabel}</ThemedText>
           <Pressable style={styles.input} onPress={() => setMode("date")}>
             <ThemedText style={styles.inputText}>
               {selectedDate.toLocaleDateString()}
@@ -83,7 +84,7 @@ function DatePickerAndTimePicker({
         </View>
 
         <View style={styles.field}>
-          <ThemedText>{timeLabel}</ThemedText>
+          <ThemedText style={dialogStyles.label}>{timeLabel}</ThemedText>
           <Pressable style={styles.input} onPress={() => setMode("time")}>
             <ThemedText style={styles.inputText}>
               {selectedDate.toLocaleTimeString([], {
@@ -119,7 +120,7 @@ export default DatePickerAndTimePicker;
 const styles = StyleSheet.create({
   container: {
     width: "100%",
-    gap: 8,
+    gap: 12,
   },
   row: {
     flexDirection: "row",
@@ -127,16 +128,15 @@ const styles = StyleSheet.create({
   },
   field: {
     flex: 1,
-    gap: 4,
+    gap: 8,
   },
   input: {
-    minHeight: 48,
-    backgroundColor: COLOR.text,
+    ...dialogStyles.input,
     justifyContent: "center",
     paddingHorizontal: 12,
   },
   inputText: {
-    color: COLOR.bg,
+    color: COLOR.text,
   },
   picker: {
     width: "100%",
@@ -146,8 +146,9 @@ const styles = StyleSheet.create({
     backgroundColor: COLOR.primary,
     paddingHorizontal: 16,
     paddingVertical: 10,
+    borderRadius: 10,
   },
   doneText: {
-    color: "#111",
+    color: COLOR.text,
   },
 });

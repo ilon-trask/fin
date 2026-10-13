@@ -16,7 +16,7 @@ export enum StorageKeyKind {
 
 type StorageKeyType = keyof typeof StorageKeyKind;
 
-const EMPTY_VALUE = `{ "version": ${VERSION}, "data":[] }`;
+const EMPTY_VALUE = JSON.stringify({ version: VERSION, data: [] });
 
 const dataSchema = z.array(z.any());
 const storageSchema = z.object({ version: z.string(), data: dataSchema });
@@ -38,6 +38,13 @@ export async function storageRead<T extends unknown[]>(
   key: StorageKeyType,
 ): Promise<T> {
   let storage = await storageReadRaw(key);
+  // Earlier versions saved unwrapped arrays; keep those expenses readable.
+  if (storage) {
+    try {
+      const legacy = JSON.parse(storage);
+      if (Array.isArray(legacy)) return legacy as T;
+    } catch { /* Invalid storage falls back to an empty collection. */ }
+  }
   let [err, value] = tryCatch(() => storageSchema.parse(JSON.parse(storage!)));
   if (err || value?.version !== VERSION) {
     storageSaveRaw(key, EMPTY_VALUE);
