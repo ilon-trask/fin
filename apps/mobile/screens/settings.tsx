@@ -1,0 +1,117 @@
+import Button from "@/components/ui/button";
+import ThemedText from "@/components/ui/themed-text";
+import { TopBar, TopBarButton } from "@/components/ui/top-bar";
+import { COLOR } from "@/constants/tokens";
+import { googlePay } from "@/integrations/google-pay";
+import { Feather } from "@expo/vector-icons";
+import { useEffect, useState } from "react";
+import { Alert, AppState, Linking, ScrollView, StyleSheet, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+
+export default function Settings({ onBack }: { onBack: () => void }) {
+  const [payStatus, setPayStatus] = useState(googlePay.status);
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", () => setPayStatus(googlePay.status()));
+    return () => subscription.remove();
+  }, []);
+  async function enableGooglePay() {
+    try {
+      await googlePay.requestNotifications();
+      googlePay.setEnabled(true);
+      setPayStatus(googlePay.status());
+      if (!googlePay.status().accessGranted) googlePay.openAccessSettings();
+    } catch {
+      Alert.alert("Could not enable Google Pay reminders", "Please try again in Android settings.");
+    }
+  }
+
+  return (
+    <SafeAreaView style={styles.main} edges={["top", "bottom"]}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <TopBar actions={<TopBarButton icon="arrow-left" label="Back to expenses" onPress={onBack} />}>
+          <ThemedText style={styles.heading}>Settings</ThemedText>
+        </TopBar>
+
+        <ThemedText style={styles.sectionLabel}>CONNECTIONS</ThemedText>
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <View style={styles.icon}><Feather name="credit-card" size={18} color={COLOR.text} /></View>
+            <View style={{ flex: 1, gap: 4 }}>
+              <ThemedText style={styles.title}>Google Pay</ThemedText>
+              <ThemedText style={styles.description}>Payment reminders</ThemedText>
+            </View>
+            <View style={styles.badge}><ThemedText style={styles.badgeText}>{payStatus.enabled ? "ON" : "OFF"}</ThemedText></View>
+          </View>
+          <ThemedText style={styles.description}>Review an amount and choose a category after a Google Pay or Wallet payment notification.</ThemedText>
+          {!googlePay.available ? (
+            <View style={styles.notice}>
+              <Feather name="info" size={14} color={COLOR.muted} />
+              <ThemedText style={[styles.description, { flex: 1 }]}>Available in the Android native build. Expo Go, iOS and web are not supported.</ThemedText>
+            </View>
+          ) : (
+            <>
+              <Button onPress={payStatus.enabled ? () => {
+                googlePay.setEnabled(false);
+                setPayStatus(googlePay.status());
+              } : enableGooglePay}>
+                <ThemedText style={styles.buttonText}>{payStatus.enabled ? "Disable reminders" : "Enable reminders"}</ThemedText>
+              </Button>
+              {payStatus.enabled && !payStatus.accessGranted && (
+                <Button onPress={googlePay.openAccessSettings}><ThemedText style={styles.buttonText}>Allow notification access</ThemedText></Button>
+              )}
+              {payStatus.enabled && !payStatus.notificationsGranted && (
+                <Button onPress={() => Linking.openSettings()}><ThemedText style={styles.buttonText}>Allow Fin notifications</ThemedText></Button>
+              )}
+            </>
+          )}
+          <View style={styles.divider} />
+          <View style={styles.privacy}>
+            <Feather name="shield" size={14} color={COLOR.muted} />
+            <ThemedText style={styles.privacyText}>Notification access lets Fin read notifications. Only matching Google Pay / Wallet alerts are stored, locally on your device.</ThemedText>
+          </View>
+        </View>
+
+        <ThemedText style={styles.sectionLabel}>YOUR DATA</ThemedText>
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <View style={styles.icon}><Feather name="database" size={18} color={COLOR.text} /></View>
+            <View style={{ flex: 1, gap: 4 }}>
+              <ThemedText style={styles.title}>Import & export</ThemedText>
+              <ThemedText style={styles.description}>Not available yet</ThemedText>
+            </View>
+          </View>
+          <View style={styles.actions}>
+            <Button disabled style={styles.secondaryButton}><Feather name="download" size={14} color={COLOR.text} /><ThemedText>Import</ThemedText></Button>
+            <Button disabled style={styles.secondaryButton}><Feather name="upload" size={14} color={COLOR.text} /><ThemedText>Export</ThemedText></Button>
+          </View>
+        </View>
+        <View style={styles.footer}>
+          <ThemedText style={styles.footerBrand}>FIN</ThemedText>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  main: { flex: 1, backgroundColor: COLOR.bg },
+  content: { width: "100%", maxWidth: 600, alignSelf: "center", paddingHorizontal: 24, paddingTop: 16, paddingBottom: 32, gap: 18 },
+  heading: { fontSize: 22, letterSpacing: -0.7, fontWeight: "600" },
+  description: { color: COLOR.muted, fontSize: 13, lineHeight: 20 },
+  sectionLabel: { color: COLOR.muted, fontSize: 10, letterSpacing: 1.4, marginTop: 8 },
+  card: { borderWidth: 1, borderColor: COLOR.border, borderRadius: 10, backgroundColor: COLOR.surface, padding: 18, gap: 18 },
+  cardHeader: { flexDirection: "row", alignItems: "center", gap: 12 },
+  icon: { width: 40, height: 40, backgroundColor: COLOR.elevated, borderRadius: 8, alignItems: "center", justifyContent: "center" },
+  title: { fontSize: 15, fontWeight: "500" },
+  badge: { paddingHorizontal: 8, paddingVertical: 5, borderRadius: 4, borderWidth: 1, borderColor: COLOR.border },
+  badgeText: { color: COLOR.muted, fontSize: 9, letterSpacing: 1 },
+  notice: { flexDirection: "row", gap: 9, backgroundColor: COLOR.elevated, borderRadius: 6, padding: 12 },
+  divider: { height: 1, backgroundColor: COLOR.border },
+  privacy: { flexDirection: "row", gap: 9 },
+  privacyText: { flex: 1, color: COLOR.muted, fontSize: 11, lineHeight: 17 },
+  buttonText: { color: COLOR.onPrimary, fontSize: 13, fontWeight: "600" },
+  actions: { flexDirection: "row", gap: 10 },
+  secondaryButton: { flex: 1, backgroundColor: COLOR.elevated, borderWidth: 1, borderColor: COLOR.border, flexDirection: "row", gap: 8 },
+  footer: { marginTop: 20, alignItems: "center", gap: 8 },
+  footerBrand: { fontWeight: "800", fontSize: 18, letterSpacing: -0.5 },
+});
