@@ -2,6 +2,7 @@ import { and, asc, count, eq } from "drizzle-orm";
 import type { ExpoSQLiteDatabase } from "drizzle-orm/expo-sqlite";
 import { metadata, outbox, records } from "./schema";
 import { parseEntities, type Entity, type Kind, type SyncResponse } from "../sync/protocol";
+import { serializeBackup, validateBackup } from "../backup";
 
 export function createRepository(db: ExpoSQLiteDatabase, newId: () => string) {
   const listeners = new Set<() => void>();
@@ -27,6 +28,33 @@ export function createRepository(db: ExpoSQLiteDatabase, newId: () => string) {
   const list = (kind: Kind): Entity[] => rows(kind, true).map((row) => JSON.parse(row.payload));
   return {
     list, meta, setMeta,
+    exportBackup() {
+      return db.transaction(() => serializeBackup(list("categories") as Parameters<typeof serializeBackup>[0], list("expenses") as Parameters<typeof serializeBackup>[1]));
+    },
+    importBackup(value: unknown) {
+      const backup = validateBackup(value);
+      const result = { categories: 0, expenses: 0, skipped: 0 };
+      db.transaction(() => {
+        const existing = rows();
+        const ids = new Set(existing.map((row) => JSON.stringify([row.kind, row.id])));
+        const paymentIds = new Set(existing.filter((row) => row.kind === "expenses").map((row) => JSON.parse(row.payload).sourcePaymentId).filter(Boolean));
+        for (const kind of ["categories", "expenses"] as const) {
+          for (const entity of backup[kind]) {
+            const paymentId = "sourcePaymentId" in entity ? entity.sourcePaymentId : undefined;
+            // Existing records, including deletions, retain their current state.
+            if (ids.has(JSON.stringify([kind, entity.id])) || (paymentId && paymentIds.has(paymentId))) {
+              result.skipped++;
+              continue;
+            }
+            queue(kind, entity, false);
+            result[kind]++;
+            if (paymentId) paymentIds.add(paymentId);
+          }
+        }
+      });
+      if (result.categories || result.expenses) notify();
+      return result;
+    },
     subscribe(listener: () => void) { listeners.add(listener); return () => { listeners.delete(listener); }; },
     upsert(kind: Kind, value: Entity) {
       const entity = parseEntities(kind, [value])[0];

@@ -2,14 +2,44 @@ import Button from "@/components/ui/button";
 import ThemedText from "@/components/ui/themed-text";
 import { TopBar, TopBarButton } from "@/components/ui/top-bar";
 import { COLOR } from "@/constants/tokens";
+import { backupFilename, parseBackup } from "@/data/backup";
+import { pickBackupFile, saveBackupFile } from "@/data/backup-files";
+import { getRepository } from "@/data/db/client";
 import { googlePay } from "@/integrations/google-pay";
 import { Feather } from "@expo/vector-icons";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Alert, AppState, Linking, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function Settings({ onBack }: { onBack: () => void }) {
   const [payStatus, setPayStatus] = useState(googlePay.status);
+  const [transfer, setTransfer] = useState<"import" | "export" | null>(null);
+  const [transferMessage, setTransferMessage] = useState("");
+  const transferInProgress = useRef(false);
+  async function transferData(action: "import" | "export") {
+    if (transferInProgress.current) return;
+    transferInProgress.current = true;
+    setTransfer(action);
+    setTransferMessage("");
+    try {
+      if (action === "import") {
+        const raw = await pickBackupFile();
+        if (raw === null) return;
+        const backup = parseBackup(raw);
+        const result = (await getRepository()).importBackup(backup);
+        setTransferMessage(`Imported ${result.expenses} expenses and ${result.categories} categories. ${result.skipped} existing or duplicate records skipped.`);
+      } else {
+        const raw = (await getRepository()).exportBackup();
+        await saveBackupFile(raw, backupFilename());
+        setTransferMessage("Backup ready. Keep the JSON file to import your data later.");
+      }
+    } catch (error) {
+      setTransferMessage(`Could not ${action}: ${error instanceof Error ? error.message : "Please try again."}`);
+    } finally {
+      transferInProgress.current = false;
+      setTransfer(null);
+    }
+  }
   useEffect(() => {
     const subscription = AppState.addEventListener("change", () => setPayStatus(googlePay.status()));
     return () => subscription.remove();
@@ -77,13 +107,15 @@ export default function Settings({ onBack }: { onBack: () => void }) {
             <View style={styles.icon}><Feather name="database" size={18} color={COLOR.text} /></View>
             <View style={{ flex: 1, gap: 4 }}>
               <ThemedText style={styles.title}>Import & export</ThemedText>
-              <ThemedText style={styles.description}>Not available yet</ThemedText>
+              <ThemedText style={styles.description}>Back up expenses and categories as JSON</ThemedText>
             </View>
           </View>
           <View style={styles.actions}>
-            <Button disabled style={styles.secondaryButton}><Feather name="download" size={14} color={COLOR.text} /><ThemedText>Import</ThemedText></Button>
-            <Button disabled style={styles.secondaryButton}><Feather name="upload" size={14} color={COLOR.text} /><ThemedText>Export</ThemedText></Button>
+            <Button accessibilityRole="button" accessibilityLabel="Import backup" disabled={transfer !== null} onPress={() => void transferData("import")} style={styles.secondaryButton}><Feather name="download" size={14} color={COLOR.text} /><ThemedText>{transfer === "import" ? "Importing…" : "Import"}</ThemedText></Button>
+            <Button accessibilityRole="button" accessibilityLabel="Export backup" disabled={transfer !== null} onPress={() => void transferData("export")} style={styles.secondaryButton}><Feather name="upload" size={14} color={COLOR.text} /><ThemedText>{transfer === "export" ? "Exporting…" : "Export"}</ThemedText></Button>
           </View>
+          <ThemedText style={styles.description}>Import a Fin backup to add missing records. Existing edits and deletions are preserved.</ThemedText>
+          {!!transferMessage && <ThemedText accessibilityLiveRegion="polite" style={styles.description}>{transferMessage}</ThemedText>}
         </View>
         <View style={styles.footer}>
           <ThemedText style={styles.footerBrand}>FIN</ThemedText>

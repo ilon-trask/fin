@@ -4,6 +4,7 @@ import Button from "@/components/ui/button";
 import ThemedText from "@/components/ui/themed-text";
 import { TopBar, TopBarButton } from "@/components/ui/top-bar";
 import { COLOR } from "@/constants/tokens";
+import { getDefaultCategoryColor } from "@/constants/category-colors";
 import { StorageKeyKind, storageRead, storageUpsert, subscribeStorage } from "@/data/storage";
 import { googlePay, PaymentDraft } from "@/integrations/google-pay";
 import { Category, Expense } from "@/types/entities";
@@ -59,6 +60,7 @@ export default function Main({ onSettings, onAnalytics, onDialogOpenChange }: {
   const savingRef = useRef(false);
   const [openedPaymentId, setOpenedPaymentId] = useState<string>();
   const [showExpenseModal, setShowExpenseModal] = useState(false);
+  const [editingExpense, setEditingExpense] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   useEffect(() => {
     onDialogOpenChange?.(showExpenseModal || showCategoryModal);
@@ -134,6 +136,7 @@ export default function Main({ onSettings, onAnalytics, onDialogOpenChange }: {
   });
 
   const showExpenseModalFunc = (categoryId: string) => {
+    setEditingExpense(false);
     setPaymentDescription(undefined);
     setExpense({
       id: uuid(),
@@ -145,6 +148,7 @@ export default function Main({ onSettings, onAnalytics, onDialogOpenChange }: {
   };
 
   const reviewPayment = (payment: PaymentDraft) => {
+    setEditingExpense(false);
     setPaymentDescription(payment.description);
     setExpense({
       id: uuid(), amount: payment.amount, date: payment.date,
@@ -153,14 +157,21 @@ export default function Main({ onSettings, onAnalytics, onDialogOpenChange }: {
     setShowExpenseModal(true);
   };
 
-  const addExpense = async (expense: Expense) => {
+  const editExpense = (expense: Expense) => {
+    setEditingExpense(true);
+    setPaymentDescription(undefined);
+    setExpense(expense);
+    setShowExpenseModal(true);
+  };
+
+  const saveExpense = async (expense: Expense) => {
     if (savingRef.current || !ready || !Number.isFinite(expense.amount) || expense.amount <= 0
       || !categories.some((category) => category.id === expense.categoryId)) return;
     savingRef.current = true;
     try {
       // Also protects against a stale reminder following a save or app restart.
       const stored = await storageRead<Expense[]>(StorageKeyKind.expenses);
-      const duplicate = expense.sourcePaymentId && stored.some((item) => item.sourcePaymentId === expense.sourcePaymentId);
+      const duplicate = expense.sourcePaymentId && stored.some((item) => item.sourcePaymentId === expense.sourcePaymentId && item.id !== expense.id);
       if (!duplicate) await storageUpsert(StorageKeyKind.expenses, expense);
       setExpenses(await storageRead<Expense[]>(StorageKeyKind.expenses));
       if (expense.sourcePaymentId) {
@@ -169,14 +180,14 @@ export default function Main({ onSettings, onAnalytics, onDialogOpenChange }: {
       }
       setShowExpenseModal(false);
     } catch {
-      Alert.alert("Payment was not saved", "Please try again.");
+      Alert.alert("Expense was not saved", "Please try again.");
     } finally { savingRef.current = false; }
   };
 
   const showCategoryModalFunc = () => {
     setCategory({
       id: uuid(),
-      color: "#A1A1AA",
+      color: getDefaultCategoryColor(categories, category.color),
       name: "",
     });
     setShowCategoryModal(true);
@@ -370,7 +381,10 @@ export default function Main({ onSettings, onAnalytics, onDialogOpenChange }: {
                     {expenses.toReversed().map((expense) => {
                       const category = categories.find((cat) => cat.id === expense.categoryId);
                       return (
-                        <View key={expense.id} style={styles.expenseRow}>
+                        <Pressable key={expense.id} accessibilityRole="button"
+                          accessibilityLabel={`Edit ${category?.name ?? "Uncategorized"} expense, ${expense.currency ? `${expense.currency} ` : ""}${expense.amount.toFixed(2)}, ${formatExpenseDate(expense.date)}`}
+                          onPress={() => editExpense(expense)}
+                          style={({ pressed }) => [styles.expenseRow, pressed && styles.categoryPressed]}>
                           <View style={styles.expenseIcon}>
                             <View style={[styles.categoryDot, { backgroundColor: category?.color ?? COLOR.muted }]} />
                           </View>
@@ -379,7 +393,7 @@ export default function Main({ onSettings, onAnalytics, onDialogOpenChange }: {
                             <ThemedText style={styles.date}>{formatExpenseDate(expense.date)}</ThemedText>
                           </View>
                           <ThemedText style={styles.amount}>{expense.currency ? `${expense.currency} ` : ""}{expense.amount.toFixed(2)}</ThemedText>
-                        </View>
+                        </Pressable>
                       );
                     })}
                   </View>
@@ -405,9 +419,10 @@ export default function Main({ onSettings, onAnalytics, onDialogOpenChange }: {
           setShowExpenseModal(false);
         }}
         expense={expense}
-        categories={expense.sourcePaymentId ? categories : undefined}
+        categories={editingExpense || expense.sourcePaymentId ? categories : undefined}
         description={paymentDescription}
-        onSave={addExpense}
+        editing={editingExpense}
+        onSave={saveExpense}
       />
     </SafeAreaView>
   );

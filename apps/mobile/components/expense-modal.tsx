@@ -7,6 +7,7 @@ import {
   View,
 } from "react-native";
 import Button from "./ui/button";
+import CategorySelect, { CategorySelectHandle } from "./category-select";
 import DatePickerAndTimePicker from "./ui/DatePickerAndTimePicker";
 import Modal from "./ui/modal";
 import ThemedInput from "./ui/themed-Input";
@@ -20,6 +21,7 @@ interface ModalProps extends RNModalProps {
   expense: Expense;
   categories?: Category[];
   description?: string;
+  editing?: boolean;
 }
 
 function ExpenseModal({
@@ -30,11 +32,14 @@ function ExpenseModal({
   expense,
   categories,
   description,
+  editing = false,
   ...props
 }: ModalProps) {
   const [localExpense, setLocalExpense] = useState<Expense>(expense);
+  const [amountText, setAmountText] = useState(() => expense.amount === 0 ? "" : expense.amount.toString());
 
   const amountInputRef = useRef<TextInput>(null);
+  const categorySelectRef = useRef<CategorySelectHandle>(null);
 
   useEffect(() => {
     if (showModal) {
@@ -57,42 +62,36 @@ function ExpenseModal({
       visible={showModal}
       onClose={onClose}
       showModal={showModal}
-      title="Add expense"
+      title={editing ? "Edit expense" : "Add expense"}
+      onInteractionStart={({ nativeEvent }) => {
+        categorySelectRef.current?.dismissIfOutside(nativeEvent.pageX, nativeEvent.pageY);
+      }}
     >
       {description && <ThemedText style={{ color: COLOR.muted, lineHeight: 20 }}>{description}</ThemedText>}
       {categories && (
         <View style={styles.field}>
-          <ThemedText style={styles.label}>Choose a category</ThemedText>
+          <ThemedText style={styles.label}>Category</ThemedText>
           {categories.length === 0 && <ThemedText>Create a category on the main screen first.</ThemedText>}
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-            {categories.map((category) => (
-              <Button key={category.id}
-                style={{ minHeight: 40, backgroundColor: COLOR.elevated, borderWidth: 1, borderColor: localExpense.categoryId === category.id ? COLOR.text : COLOR.border }}
-                onPress={() => setLocalExpense((previous) => ({ ...previous, categoryId: category.id }))}>
-                <ThemedText>{category.name}</ThemedText>
-              </Button>
-            ))}
-          </View>
+          <CategorySelect ref={categorySelectRef} categories={categories} value={localExpense.categoryId}
+            onChange={(categoryId) => setLocalExpense((previous) => ({ ...previous, categoryId }))} />
         </View>
       )}
       <View style={styles.field}>
         <ThemedText style={styles.label}>Amount {localExpense.currency ? `(${localExpense.currency})` : ""}</ThemedText>
         <ThemedInput
+          accessibilityLabel="Amount"
           style={styles.input}
           ref={amountInputRef}
-          keyboardType="numeric"
+          keyboardType="decimal-pad"
+          inputMode="decimal"
           placeholder="0.00"
           onSubmitEditing={() => canSave && onSave(localExpense)}
-          value={localExpense.amount.toString()}
-          onChangeText={(e) => {
-            let res: string | number = e;
-            if (res !== "") {
-              res = +e;
-              if (Number.isNaN(res)) {
-                return;
-              }
-            }
-            setLocalExpense((prev) => ({ ...prev, amount: res as number }));
+          value={amountText}
+          onChangeText={(text) => {
+            if (!/^\d*(?:[.,]\d{0,2})?$/.test(text)) return;
+            setAmountText(text);
+            const amount = Number(text.replace(",", "."));
+            setLocalExpense((prev) => ({ ...prev, amount }));
           }}
         />
       </View>

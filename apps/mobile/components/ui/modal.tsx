@@ -2,6 +2,7 @@ import { COLOR } from "@/constants/tokens";
 import React from "react";
 import {
   KeyboardAvoidingView,
+  GestureResponderEvent,
   Platform,
   Pressable,
   Modal as RNModal,
@@ -17,9 +18,10 @@ interface ModalProps extends RNModalProps {
   showModal: boolean;
   onClose: () => void;
   title: string;
+  onInteractionStart?: (event: GestureResponderEvent) => void;
 }
 
-function Modal({ onClose, showModal, title, style, children, ...props }: ModalProps) {
+function Modal({ onClose, showModal, title, style, children, onInteractionStart, ...props }: ModalProps) {
   const { width, height } = useWindowDimensions();
   const dialogWidth = Math.min(width - 40, 420);
 
@@ -36,7 +38,11 @@ function Modal({ onClose, showModal, title, style, children, ...props }: ModalPr
         style={[styles.keyboard, { width, height }]}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <View style={[styles.bg, { width }]}>
+        <View style={[styles.bg, { width }]}
+          onStartShouldSetResponderCapture={(event) => {
+            onInteractionStart?.(event);
+            return false;
+          }}>
           <Pressable
             style={StyleSheet.absoluteFill}
             onPress={onClose}

@@ -10,6 +10,7 @@
     "start": "npm run start -w @fin/mobile",
     "web": "npm run web -w @fin/mobile",
     "android": "npm run android -w @fin/mobile",
+    "build:android": "npm run build:android -w @fin/mobile",
     "ios": "npm run ios -w @fin/mobile",
     "sync:server": "npm run dev -w @fin/server",
     "lint": "npm run lint -w @fin/mobile",

@@ -1,4 +1,6 @@
 {
+  "name": "Fin",
+  "slug": "fin",
   "backgroundColor": "#050505",
   "android": {
     "package": "com.myha.finsam"
@@ -13,7 +15,13 @@
     "expo-system-ui",
     "expo-web-browser",
     "expo-sqlite",
-    "expo-secure-store"
+    "expo-secure-store",
+    "expo-sharing"
   ],
-  "scheme": "finsam"
+  "scheme": "finsam",
+  "extra": {
+    "eas": {
+      "projectId": "3393f4d4-2046-4e33-bda2-6c22fe1a2cee"
+    }
+  }
 }

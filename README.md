@@ -21,6 +21,33 @@ launch it migrates both historical AsyncStorage formats to SQLite, retaining the
 original values as a recovery backup. Invalid historical data produces a load
 error rather than being overwritten.
 
+## Install on Android
+
+Run `npx eas-cli@latest login` once, then `npm run build:android` from the
+repository root. This runs EAS Build from `apps/mobile`, using its `eas.json`
+preview profile to produce a standalone APK. Allow EAS to generate an Android
+signing key if prompted. Open the finished build's installation link on your
+phone, download the APK, and allow installation from your browser when Android
+asks. The installed app does not require a development server.
+
+Run other EAS commands from `apps/mobile`, not the repository root. To check
+JavaScript bundling locally before a build, run
+`npm exec --workspace @fin/mobile -- expo export --platform android`.
+
+## Import and export
+
+In **Settings → Your data**, export a versioned Fin JSON backup containing all
+active expenses and categories, including currencies and payment reminder IDs.
+Web downloads the file; Android and iOS open the system share sheet to save or
+share it. Rebuild native apps after installing the new file picker/sharing modules.
+
+Import a Fin backup (up to 20 MB) to add missing records. Existing records and
+deletions are preserved, and duplicate IDs or payment reminders are skipped.
+Invalid files are rejected before writing; both collections and their sync
+operations commit together. Imported data refreshes the UI and participates in
+normal sync. Backups contain your financial data in plain text; connection tokens
+and pending Google Pay reminders are not included.
+
 ## Start the Hono sync backend
 
 ```sh

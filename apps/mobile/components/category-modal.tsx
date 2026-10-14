@@ -1,5 +1,6 @@
 import { Category } from "@/types/entities";
 import { COLOR } from "@/constants/tokens";
+import { categoryPresetColors as presetColors } from "@/constants/category-colors";
 import { Feather } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import React, { useEffect, useRef, useState } from "react";
@@ -16,17 +17,14 @@ import ThemedInput from "./ui/themed-Input";
 import ThemedText from "./ui/themed-text";
 import { dialogStyles as styles } from "./ui/dialog-styles";
 
+const CATEGORY_NAME_MAX_LENGTH = 30;
+
 interface ModalProps extends RNModalProps {
   showModal: boolean;
   onClose: () => void;
   onSave: (expense: Category) => void;
   category: Category;
 }
-
-const presetColors = [
-  ["Gray", "#A1A1AA"], ["Sage", "#A2B4A3"], ["Sand", "#C8B38E"],
-  ["Rose", "#B69698"], ["Blue", "#A0ABCF"], ["Lavender", "#ADA0C7"],
-];
 
 function CategoryModal({ category, onSave, showModal, ...props }: ModalProps) {
   const [localCategory, setLocalCategory] = useState<Category>(category);
@@ -63,7 +61,8 @@ function CategoryModal({ category, onSave, showModal, ...props }: ModalProps) {
   }, [showModal]);
 
   const save = (data: Category) => {
-    if (data.name) onSave(data);
+    const name = data.name.trim();
+    if (name && name.length <= CATEGORY_NAME_MAX_LENGTH) onSave({ ...data, name });
   };
 
   return (
@@ -71,6 +70,8 @@ function CategoryModal({ category, onSave, showModal, ...props }: ModalProps) {
       <View style={styles.field}>
         <ThemedText style={styles.label}>Name</ThemedText>
         <ThemedInput
+          accessibilityLabel="Category name"
+          maxLength={CATEGORY_NAME_MAX_LENGTH}
           style={styles.input}
           ref={nameInputRef}
           placeholder="e.g. Food & drinks"
@@ -80,6 +81,9 @@ function CategoryModal({ category, onSave, showModal, ...props }: ModalProps) {
             setLocalCategory((prev) => ({ ...prev, name: e }))
           }
         />
+        <ThemedText style={{ color: COLOR.muted, fontSize: 12, textAlign: "right" }}>
+          {localCategory.name.length}/{CATEGORY_NAME_MAX_LENGTH}
+        </ThemedText>
       </View>
       <View style={styles.field}>
         <ThemedText style={styles.label}>Color</ThemedText>
@@ -112,7 +116,7 @@ function CategoryModal({ category, onSave, showModal, ...props }: ModalProps) {
           <ColorPicker giveColor={changeCustomColor} />
         </View>
       </View>
-      <Button disabled={!localCategory.name.trim()} style={styles.save} onPress={() => save(localCategory)}>
+      <Button disabled={!localCategory.name.trim() || localCategory.name.length > CATEGORY_NAME_MAX_LENGTH} style={styles.save} onPress={() => save(localCategory)}>
         <ThemedText style={styles.saveText}>Save</ThemedText>
       </Button>
     </Modal>

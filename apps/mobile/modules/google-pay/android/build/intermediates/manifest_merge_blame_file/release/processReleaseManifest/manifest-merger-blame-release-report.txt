@@ -1,0 +1,32 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="expo.modules.googlepay" >
+4
+5    <uses-sdk android:minSdkVersion="24" />
+6
+7    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+7-->/Users/myha/Desktop/fin/apps/mobile/modules/google-pay/android/src/main/AndroidManifest.xml:2:3-75
+7-->/Users/myha/Desktop/fin/apps/mobile/modules/google-pay/android/src/main/AndroidManifest.xml:2:20-72
+8
+9    <application>
+9-->/Users/myha/Desktop/fin/apps/mobile/modules/google-pay/android/src/main/AndroidManifest.xml:3:3-12:17
+10        <service
+10-->/Users/myha/Desktop/fin/apps/mobile/modules/google-pay/android/src/main/AndroidManifest.xml:4:5-11:15
+11            android:name="expo.modules.googlepay.PaymentNotificationListener"
+11-->/Users/myha/Desktop/fin/apps/mobile/modules/google-pay/android/src/main/AndroidManifest.xml:4:14-79
+12            android:exported="true"
+12-->/Users/myha/Desktop/fin/apps/mobile/modules/google-pay/android/src/main/AndroidManifest.xml:7:7-30
+13            android:label="Fin Google Pay payment reminders"
+13-->/Users/myha/Desktop/fin/apps/mobile/modules/google-pay/android/src/main/AndroidManifest.xml:5:7-55
+14            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE" >
+14-->/Users/myha/Desktop/fin/apps/mobile/modules/google-pay/android/src/main/AndroidManifest.xml:6:7-81
+15            <intent-filter>
+15-->/Users/myha/Desktop/fin/apps/mobile/modules/google-pay/android/src/main/AndroidManifest.xml:8:7-10:23
+16                <action android:name="android.service.notification.NotificationListenerService" />
+16-->/Users/myha/Desktop/fin/apps/mobile/modules/google-pay/android/src/main/AndroidManifest.xml:9:9-91
+16-->/Users/myha/Desktop/fin/apps/mobile/modules/google-pay/android/src/main/AndroidManifest.xml:9:17-88
+17            </intent-filter>
+18        </service>
+19    </application>
+20
+21</manifest>

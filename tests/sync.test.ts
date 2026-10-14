@@ -12,6 +12,7 @@ import { migrateDatabase } from "../apps/mobile/data/db/migrations";
 import { createSyncStore } from "../apps/server/src/store";
 import { createApp } from "../apps/server/src/app";
 import { parseCollection } from "@fin/shared";
+import { parseBackup, serializeBackup } from "../apps/mobile/data/backup";
 
 const category = { id: "food", name: "Food", color: "#abcdef" };
 function client(filename = ":memory:") {
@@ -19,8 +20,62 @@ function client(filename = ":memory:") {
   migrateDatabase({ execSync: (sql) => { sqlite.exec(sql); }, getFirstSync: <T>(sql: string) => sqlite.prepare(sql).get() as T });
   // Repository uses the common synchronous SQLite API; production driver is Expo.
   const repository = createRepository(drizzle(sqlite) as unknown as ExpoSQLiteDatabase, randomUUID);
-  return { repository, close: () => sqlite.close() };
+  return { repository, sqlite, close: () => sqlite.close() };
 }
+
+test("backups round trip all fields, queue imports for sync, and preserve edits and deletions", () => {
+  const a = client(); const b = client(); const server = createSyncStore(":memory:");
+  const expense = { id: "backup-expense", amount: 12.5, date: "2026-10-13T10:00:00.000Z", categoryId: category.id, currency: "EUR", sourcePaymentId: "payment-backup" };
+  try {
+    a.repository.upsert("categories", category);
+    a.repository.upsert("expenses", expense);
+    const backup = parseBackup(a.repository.exportBackup());
+    assert.deepEqual(backup.expenses, [expense]);
+    assert.deepEqual(b.repository.importBackup(backup), { categories: 1, expenses: 1, skipped: 0 });
+    assert.equal(b.repository.pendingCount(), 2);
+    assert.deepEqual(parseBackup(b.repository.exportBackup()).categories, [category]);
+    let notifications = 0;
+    b.repository.subscribe(() => notifications++);
+    assert.deepEqual(b.repository.importBackup(backup), { categories: 0, expenses: 0, skipped: 2 });
+    assert.equal(notifications, 0);
+    assert.equal(b.repository.pendingCount(), 2);
+    sync(b.repository, server);
+    b.repository.upsert("categories", { ...category, name: "Edited" });
+    b.repository.remove("expenses", expense.id);
+    b.repository.importBackup(backup);
+    assert.equal(b.repository.list("categories")[0].name, "Edited");
+    assert.deepEqual(b.repository.list("expenses"), []);
+    b.repository.importBackup({ ...backup, expenses: [{ ...expense, id: "different-id" }] });
+    assert.deepEqual(b.repository.list("expenses"), []);
+  } finally { a.close(); b.close(); server.close(); }
+});
+
+test("backup validation rejects malformed files, unknown versions and duplicate IDs before writing", () => {
+  const a = client();
+  try {
+    const backup = parseBackup(serializeBackup([category], []));
+    assert.deepEqual(parseBackup(`\uFEFF${JSON.stringify(backup)}`), backup);
+    assert.throws(() => parseBackup("not json"), /not valid JSON/);
+    assert.throws(() => parseBackup(JSON.stringify({ ...backup, version: 2 })), /valid Fin/);
+    assert.throws(() => a.repository.importBackup({ ...backup, categories: [category, category] }), /duplicate/);
+    assert.throws(() => a.repository.importBackup({ ...backup, expenses: [{ id: "invalid", amount: -1 }] }), /valid Fin/);
+    assert.equal(a.repository.pendingCount(), 0);
+    assert.deepEqual(a.repository.list("categories"), []);
+    assert.deepEqual(parseBackup(serializeBackup([], [])).expenses, []);
+  } finally { a.close(); }
+});
+
+test("backup imports roll back both collections and outbox when a database write fails", () => {
+  const a = client();
+  try {
+    a.sqlite.exec("CREATE TRIGGER fail_import BEFORE INSERT ON records WHEN NEW.kind = 'expenses' BEGIN SELECT RAISE(ABORT, 'test write failure'); END");
+    const backup = parseBackup(serializeBackup([category], [{ id: "expense", amount: 10, date: "2026-01-01", categoryId: category.id }]));
+    assert.throws(() => a.repository.importBackup(backup), /test write failure/);
+    assert.deepEqual(a.repository.list("categories"), []);
+    assert.deepEqual(a.repository.list("expenses"), []);
+    assert.equal(a.repository.pendingCount(), 0);
+  } finally { a.close(); }
+});
 function sync(repository: ReturnType<typeof createRepository>, server: ReturnType<typeof createSyncStore>) {
   const operations = repository.pending();
   const result = server.sync({ cursor: repository.cursor(), operations });
@@ -64,6 +119,27 @@ test("lost responses retry idempotently; edits during requests remain visible an
     sync(a.repository, server); sync(b.repository, server);
     assert.deepEqual(a.repository.list("categories"), b.repository.list("categories"));
     assert.throws(() => server.sync({ cursor: 0, operations: [{ ...sent[0], payload: JSON.stringify({ ...category, name: "Tampered" }) }] }));
+  } finally { a.close(); b.close(); server.close(); }
+});
+
+test("expense edits replace the original record and sync while preserving payment metadata", () => {
+  const a = client(); const b = client(); const server = createSyncStore(":memory:");
+  const expense = { id: "editable-expense", amount: 10, date: "2026-10-13T10:00:00.000Z", categoryId: category.id, currency: "EUR", sourcePaymentId: "editable-payment" };
+  const edited = { ...expense, amount: 24.5, date: "2026-10-14T12:30:00.000Z", categoryId: "travel" };
+  try {
+    a.repository.upsert("categories", category);
+    a.repository.upsert("categories", { ...category, id: "travel", name: "Travel" });
+    a.repository.upsert("expenses", expense);
+    sync(a.repository, server); sync(b.repository, server);
+    a.repository.upsert("expenses", edited);
+    assert.deepEqual(a.repository.list("expenses"), [edited]);
+    assert.equal(a.repository.pendingCount(), 1);
+    // A repeated payment reminder must still be ignored after an edit.
+    a.repository.upsert("expenses", { ...expense, id: "duplicate-reminder" });
+    assert.deepEqual(a.repository.list("expenses"), [edited]);
+    sync(a.repository, server); sync(b.repository, server);
+    assert.deepEqual(b.repository.list("expenses"), [edited]);
+    assert.equal(a.repository.pendingCount(), 0);
   } finally { a.close(); b.close(); server.close(); }
 });
 

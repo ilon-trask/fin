@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "3393f4d4-2046-4e33-bda2-6c22fe1a2cee"
+      }
+    },
+    "android": {
+      "package": "com.myha.fin"
+    }
+  }
+}

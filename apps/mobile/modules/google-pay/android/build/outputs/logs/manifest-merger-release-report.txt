@@ -1,0 +1,38 @@
+-- Merging decision tree log ---
+manifest
+ADDED from /Users/myha/Desktop/fin/apps/mobile/modules/google-pay/android/src/main/AndroidManifest.xml:1:1-13:12
+INJECTED from /Users/myha/Desktop/fin/apps/mobile/modules/google-pay/android/src/main/AndroidManifest.xml:1:1-13:12
+	package
+		INJECTED from /Users/myha/Desktop/fin/apps/mobile/modules/google-pay/android/src/main/AndroidManifest.xml
+	xmlns:android
+		ADDED from /Users/myha/Desktop/fin/apps/mobile/modules/google-pay/android/src/main/AndroidManifest.xml:1:11-69
+uses-permission#android.permission.POST_NOTIFICATIONS
+ADDED from /Users/myha/Desktop/fin/apps/mobile/modules/google-pay/android/src/main/AndroidManifest.xml:2:3-75
+	android:name
+		ADDED from /Users/myha/Desktop/fin/apps/mobile/modules/google-pay/android/src/main/AndroidManifest.xml:2:20-72
+application
+ADDED from /Users/myha/Desktop/fin/apps/mobile/modules/google-pay/android/src/main/AndroidManifest.xml:3:3-12:17
+service#expo.modules.googlepay.PaymentNotificationListener
+ADDED from /Users/myha/Desktop/fin/apps/mobile/modules/google-pay/android/src/main/AndroidManifest.xml:4:5-11:15
+	android:label
+		ADDED from /Users/myha/Desktop/fin/apps/mobile/modules/google-pay/android/src/main/AndroidManifest.xml:5:7-55
+	android:exported
+		ADDED from /Users/myha/Desktop/fin/apps/mobile/modules/google-pay/android/src/main/AndroidManifest.xml:7:7-30
+	android:permission
+		ADDED from /Users/myha/Desktop/fin/apps/mobile/modules/google-pay/android/src/main/AndroidManifest.xml:6:7-81
+	android:name
+		ADDED from /Users/myha/Desktop/fin/apps/mobile/modules/google-pay/android/src/main/AndroidManifest.xml:4:14-79
+intent-filter#action:name:android.service.notification.NotificationListenerService
+ADDED from /Users/myha/Desktop/fin/apps/mobile/modules/google-pay/android/src/main/AndroidManifest.xml:8:7-10:23
+action#android.service.notification.NotificationListenerService
+ADDED from /Users/myha/Desktop/fin/apps/mobile/modules/google-pay/android/src/main/AndroidManifest.xml:9:9-91
+	android:name
+		ADDED from /Users/myha/Desktop/fin/apps/mobile/modules/google-pay/android/src/main/AndroidManifest.xml:9:17-88
+uses-sdk
+INJECTED from /Users/myha/Desktop/fin/apps/mobile/modules/google-pay/android/src/main/AndroidManifest.xml reason: use-sdk injection requested
+INJECTED from /Users/myha/Desktop/fin/apps/mobile/modules/google-pay/android/src/main/AndroidManifest.xml
+INJECTED from /Users/myha/Desktop/fin/apps/mobile/modules/google-pay/android/src/main/AndroidManifest.xml
+	android:targetSdkVersion
+		INJECTED from /Users/myha/Desktop/fin/apps/mobile/modules/google-pay/android/src/main/AndroidManifest.xml
+	android:minSdkVersion
+		INJECTED from /Users/myha/Desktop/fin/apps/mobile/modules/google-pay/android/src/main/AndroidManifest.xml
