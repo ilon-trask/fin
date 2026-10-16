@@ -2,8 +2,9 @@ import { StyleSheet } from "react-native";
 import { COLOR, SCREEN_LAYOUT } from "@/constants/tokens";
 
 export const styles = StyleSheet.create({
-  main: { flex: 1, backgroundColor: COLOR.bg },
-  viewport: { flex: 1, overflow: "hidden" },
+  main: { flex: 1, backgroundColor: COLOR.bg, overflow: "hidden" },
+  // Clip at the screen edge so the overview blur can cover the top safe-area inset.
+  viewport: { flex: 1 },
   content: { width: "100%", maxWidth: 600, alignSelf: "center" },
   expenseSheet: { position: "absolute", top: 0, width: "100%", maxWidth: 600, alignSelf: "center", zIndex: 1 },
   sheetHandle: { width: 32, height: 3, borderRadius: 2, backgroundColor: COLOR.muted, alignSelf: "center", marginBottom: 2 },

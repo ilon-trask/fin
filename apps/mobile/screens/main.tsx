@@ -191,8 +191,13 @@ export default function Main({ onSettings, onAnalytics, onDialogOpenChange }: {
       >
         {/* The overview has no vertical scroll surface. Only the expense sheet moves. */}
         <View style={styles.content}>
-          {/* Fill the viewport without moving the initial expense list position. */}
-          <BlurTargetView ref={blurTarget} style={{ minHeight: viewportHeight, backgroundColor: COLOR.bg }}>
+          {/* Include the status-bar inset in both the target and blur without moving the overview. */}
+          <BlurTargetView ref={blurTarget} style={{
+            marginTop: -insets.top,
+            paddingTop: insets.top,
+            minHeight: viewportHeight + insets.top,
+            backgroundColor: COLOR.bg,
+          }}>
             <MainOverview
               categories={categories}
               expenses={expenses}
@@ -217,7 +222,7 @@ export default function Main({ onSettings, onAnalytics, onDialogOpenChange }: {
             intensity={55}
             style={[
               StyleSheet.absoluteFill,
-              { bottom: undefined, height: Math.max(viewportHeight, overviewHeight), opacity: scrollY.interpolate({
+              { top: -insets.top, bottom: undefined, height: Math.max(viewportHeight, overviewHeight) + insets.top, opacity: scrollY.interpolate({
                 inputRange: [0, 220],
                 outputRange: [0, 1],
                 extrapolate: "clamp",
