@@ -36,6 +36,7 @@ export default function DatePickerAndTimePicker({
   const [mode, setMode] = useState<"date" | "time" | null>(null);
   const [month, setMonth] = useState(() => new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
   const [jump, setJump] = useState(false);
+  const [compact, setCompact] = useState(false);
   const [year, setYear] = useState(String(selectedDate.getFullYear()));
   const today = new Date();
   const open = mode === "date";
@@ -67,12 +68,13 @@ export default function DatePickerAndTimePicker({
   const offset = (month.getDay() + 6) % 7;
   const daysInMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
   const cells = Array.from({ length: Math.ceil((offset + daysInMonth) / 7) * 7 }, (_, i) => new Date(month.getFullYear(), month.getMonth(), i - offset + 1));
+  const weeks = Array.from({ length: cells.length / 7 }, (_, index) => cells.slice(index * 7, index * 7 + 7));
   const relativeDate = sameDay(selectedDate, today) ? "Today" : selectedDate.toLocaleDateString(undefined, { month: "short", day: "numeric", ...(selectedDate.getFullYear() !== today.getFullYear() && { year: "numeric" }) });
 
   return (
-    <View style={[styles.container, style]}>
-      <View style={styles.row}>
-        <View style={styles.dateField}>
+    <View style={[styles.container, style]} onLayout={({ nativeEvent }) => setCompact(nativeEvent.layout.width < 280)}>
+      <View style={[styles.row, compact && styles.stackedRow]}>
+        <View style={[styles.dateField, compact && styles.stackedField]}>
           <ThemedText style={dialogStyles.label}>{dateLabel}</ThemedText>
           <Pressable accessibilityRole="button"
             accessibilityLabel={`Choose date, ${selectedDate.toLocaleDateString(undefined, { dateStyle: "full" })}`}
@@ -83,7 +85,7 @@ export default function DatePickerAndTimePicker({
             <Feather name={open ? "chevron-up" : "chevron-down"} size={14} color={COLOR.muted} />
           </Pressable>
         </View>
-        <View style={styles.timeField}>
+        <View style={[styles.timeField, compact && styles.stackedField]}>
           <ThemedText style={dialogStyles.label}>{timeLabel}</ThemedText>
           <TimePicker value={selectedDate} label={timeLabel} open={mode === "time"} onToggle={() => toggle("time")} />
         </View>
@@ -97,7 +99,7 @@ export default function DatePickerAndTimePicker({
             </Pressable>
             <Pressable accessibilityRole="button" accessibilityLabel="Choose month and year" accessibilityState={{ expanded: jump }}
               style={styles.monthHeading} onPress={() => { setYear(String(month.getFullYear())); setJump(!jump); }}>
-              <ThemedText accessibilityLiveRegion="polite" style={styles.monthTitle}>{month.toLocaleDateString(undefined, { month: "long", year: "numeric" })}</ThemedText>
+              <ThemedText accessibilityLiveRegion="polite" numberOfLines={1} style={styles.monthTitle}>{month.toLocaleDateString(undefined, { month: "long", year: "numeric" })}</ThemedText>
               <Feather name={jump ? "chevron-up" : "chevron-down"} size={14} color={COLOR.muted} />
             </Pressable>
             <Pressable accessibilityRole="button" accessibilityLabel="Next month" style={styles.monthButton} onPress={() => moveMonth(1)}>
@@ -117,18 +119,18 @@ export default function DatePickerAndTimePicker({
               <ThemedText style={styles.dayText}>{name}</ThemedText>
             </Pressable>)}</View>
             {!validYear && <ThemedText style={styles.caption}>Enter a year from 1000 to 9999.</ThemedText>}
-          </View> : <View style={styles.grid}>
-            {weekdays.map((day) => <View key={day} style={styles.weekdayCell}><ThemedText style={styles.weekday}>{day}</ThemedText></View>)}
-            {cells.map((day) => {
+          </View> : <View>
+            <View style={styles.weekRow}>
+              {weekdays.map((day) => <View key={day} style={styles.weekdayCell}><ThemedText style={styles.weekday}>{day}</ThemedText></View>)}
+            </View>
+            {weeks.map((week) => <View key={week[0].toISOString()} style={styles.weekRow}>{week.map((day) => {
               const selected = sameDay(day, selectedDate);
-              return <View key={day.toISOString()} style={styles.cell}>
-                <Pressable accessibilityRole="button" accessibilityLabel={day.toLocaleDateString(undefined, { dateStyle: "full" })}
+              return <Pressable key={day.toISOString()} accessibilityRole="button" accessibilityLabel={day.toLocaleDateString(undefined, { dateStyle: "full" })}
                   accessibilityState={{ selected }} onPress={() => chooseDay(day)}
                   style={({ pressed }) => [styles.day, sameDay(day, today) && styles.today, selected && styles.selectedDay, pressed && styles.pressed]}>
-                  <ThemedText style={[styles.dayText, day.getMonth() !== month.getMonth() && styles.outsideDay, selected && styles.selectedDayText]}>{day.getDate()}</ThemedText>
-                </Pressable>
-              </View>;
-            })}
+                  <ThemedText numberOfLines={1} adjustsFontSizeToFit style={[styles.dayText, styles.dayNumber, day.getMonth() !== month.getMonth() && styles.outsideDay, selected && styles.selectedDayText]}>{day.getDate()}</ThemedText>
+              </Pressable>;
+            })}</View>)}
           </View>}
           <Pressable accessibilityRole="button" accessibilityLabel="Choose today" onPress={() => chooseDay(today)}
             style={({ pressed }) => [styles.todayButton, pressed && styles.pressed]}>
@@ -143,8 +145,10 @@ export default function DatePickerAndTimePicker({
 const styles = StyleSheet.create({
   container: { width: "100%", gap: 12 },
   row: { flexDirection: "row", gap: 10 },
-  dateField: { flex: 1.2, gap: 8 },
-  timeField: { flex: 1, gap: 8 },
+  stackedRow: { flexDirection: "column" },
+  stackedField: { flexGrow: 0, flexShrink: 0, flexBasis: "auto" },
+  dateField: { flex: 1.2, minWidth: 0, gap: 8 },
+  timeField: { flex: 1, minWidth: 0, gap: 8 },
   input: { ...dialogStyles.input, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 12, minHeight: 48 },
   activeInput: { borderColor: COLOR.muted, backgroundColor: COLOR.elevated },
   dateText: { flex: 1, fontSize: 14, fontWeight: "600" },
@@ -153,22 +157,23 @@ const styles = StyleSheet.create({
   selectedMonth: { backgroundColor: COLOR.elevated, borderColor: COLOR.muted },
   calendar: { backgroundColor: COLOR.bg, borderRadius: 10, borderWidth: 1, borderColor: COLOR.border, padding: 12, gap: 12 },
   calendarHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  monthHeading: { flexDirection: "row", alignItems: "center", gap: 6, minHeight: 44 },
-  monthTitle: { fontSize: 14, fontWeight: "600" },
+  monthHeading: { flex: 1, minWidth: 0, justifyContent: "center", flexDirection: "row", alignItems: "center", gap: 6, minHeight: 44 },
+  monthTitle: { flexShrink: 1, fontSize: 14, fontWeight: "600" },
   monthButton: { width: 40, height: 44, alignItems: "center", justifyContent: "center", borderRadius: 6 },
   grid: { flexDirection: "row", flexWrap: "wrap" },
-  cell: { width: "14.285714%", height: 42, alignItems: "center", justifyContent: "center" },
-  weekdayCell: { width: "14.285714%", height: 28, alignItems: "center", justifyContent: "center" },
+  weekRow: { flexDirection: "row" },
+  weekdayCell: { flex: 1, minWidth: 0, height: 28, alignItems: "center", justifyContent: "center" },
   weekday: { color: COLOR.muted, fontSize: 11 },
-  day: { width: "100%", height: 40, borderRadius: 7, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "transparent" },
+  day: { flex: 1, minWidth: 0, height: 40, marginVertical: 1, borderRadius: 7, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "transparent" },
   today: { borderColor: COLOR.muted },
   selectedDay: { backgroundColor: COLOR.primary, borderColor: COLOR.primary },
   dayText: { fontSize: 13 },
+  dayNumber: { width: "100%", textAlign: "center", fontVariant: ["tabular-nums"] },
   outsideDay: { color: COLOR.muted, opacity: 0.5 },
   selectedDayText: { color: COLOR.onPrimary, fontWeight: "600", opacity: 1 },
   jump: { gap: 12 },
   yearRow: { flexDirection: "row", alignItems: "center", gap: 12 },
-  yearInput: { flex: 1, color: COLOR.text, fontSize: 18, fontWeight: "600", borderWidth: 1, borderColor: COLOR.border, borderRadius: 7, height: 44, paddingHorizontal: 12 },
+  yearInput: { flex: 1, minWidth: 0, color: COLOR.text, fontSize: 18, fontWeight: "600", borderWidth: 1, borderColor: COLOR.border, borderRadius: 7, height: 44, paddingHorizontal: 12 },
   monthChoice: { width: "33.333333%", minHeight: 48, alignItems: "center", justifyContent: "center", borderRadius: 7, borderWidth: 1, borderColor: "transparent" },
   todayButton: { minHeight: 44, alignItems: "center", justifyContent: "center", borderTopWidth: 1, borderColor: COLOR.border },
   todayText: { fontSize: 13, fontWeight: "600" },
