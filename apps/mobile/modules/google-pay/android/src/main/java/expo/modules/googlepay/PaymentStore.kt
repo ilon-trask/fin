@@ -12,7 +12,6 @@ object PaymentStore {
     prefs(context).edit().putBoolean("enabled", enabled).apply()
     if (!enabled) {
       pending(context).forEach { dismiss(context, it.getString("id")) }
-      prefs(context).edit().remove("pending").apply()
     }
   }
   @Synchronized fun pending(context: Context): List<JSONObject> {
@@ -24,12 +23,14 @@ object PaymentStore {
     val seen = JSONArray(prefs(context).getString("seen", "[]"))
     val id = payment.getString("id")
     if ((0 until seen.length()).any { seen.getString(it) == id }) return false
-    val history = (0 until seen.length()).map { seen.getString(it) }.takeLast(499) + id
+    val history = (0 until seen.length()).map { seen.getString(it) } + id
     val queue = pending(context) + payment
-    queue.dropLast(100).forEach { dismiss(context, it.getString("id")) }
-    prefs(context).edit().putString("pending", JSONArray(queue.takeLast(100)).toString())
+    return prefs(context).edit().putString("pending", JSONArray(queue).toString())
       .putString("seen", JSONArray(history).toString()).commit()
-    return true
+  }
+  @Synchronized fun markNotified(context: Context, id: String) {
+    val queue = pending(context).map { if (it.getString("id") == id) it.put("notified", true) else it }
+    prefs(context).edit().putString("pending", JSONArray(queue).toString()).commit()
   }
   @Synchronized fun remove(context: Context, id: String) {
     prefs(context).edit().putString("pending", JSONArray(pending(context).filter { it.getString("id") != id }).toString()).commit()

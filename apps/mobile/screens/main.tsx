@@ -161,9 +161,10 @@ export default function Main({ onSettings, onAnalytics, onDialogOpenChange }: {
         .forEach((payment) => googlePay.dismiss(payment.id));
       setPayments(googlePay.pending());
     };
+    googlePay.refresh();
     refresh();
     const subscription = AppState.addEventListener("change", (state) => {
-      if (state === "active") refresh();
+      if (state === "active") { googlePay.refresh(); refresh(); }
     });
     // The native listener also runs while this screen is active.
     const timer = setInterval(refresh, 3000);

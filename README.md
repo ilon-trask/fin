@@ -174,29 +174,38 @@ it cannot run in Expo Go, iOS or web.
 
 In the app's Settings page, enable Google Pay reminders, allow Fin notifications,
 and grant notification access to **Fin Google Pay payment reminders**. After a
-matching outgoing Google Pay/Wallet notification, Fin posts an **Add payment**
-notification action. Tap it, review the prefilled amount/date, choose a category,
-and save. Pending payments also appear on the main screen and can be dismissed.
-Closing a draft leaves it pending. Disabling reminders deletes pending drafts.
+matching outgoing Google Pay/Wallet notification, Fin saves a pending payment and
+posts a **Review payment** notification action. Tap it, review the prefilled
+amount/date, choose a category, and save. Pending payments also appear on the main
+screen and can be dismissed. Closing a draft leaves it pending. Disabling reminders
+keeps pending drafts. Drafts remain until saved or explicitly dismissed, without a
+queue-size expiry.
 
-This uses Android notification access, not a Google transaction-history API.
-Only Google Pay/Wallet packages are processed. Matching alerts stay on-device;
-other apps' notification contents are not stored. Detection currently supports
-English/German outgoing-payment wording and EUR/USD/GBP/INR amounts. Payments
-without a readable matching notification cannot be detected. Failed payments,
-refunds, requests, offers and alerts containing multiple amounts are skipped.
-Currencies are preserved and totals are shown separately by currency; older
+This uses Android notification access, not a Google transaction-history API. Google
+Pay/Wallet packages and Wallet-identified notifications delivered by Google Play
+services are processed. Matching alerts stay on-device; other apps' notification
+contents are not stored. Detection currently supports English/German outgoing payment wording, amount-at-merchant purchase alerts, and EUR/USD/GBP/INR amounts.
+Payments without a readable matching notification cannot be detected. Failed
+payments, refunds, requests, offers and alerts containing multiple amounts are
+skipped. Currencies are preserved and totals are shown separately by currency; older
 expenses without a currency retain their separate total.
 
 Verification on an Android device:
 
 1. Create a category, enable reminders and grant both permissions.
 2. Make a Google Pay payment that issues a matching Wallet notification.
-3. Tap **Add payment** with Fin closed, then repeat with Fin open; check the
+3. Tap **Review payment** with Fin closed, then repeat with Fin open; check the
    amount/date/currency, category selection and persistence after restarting.
 4. Check that dismissing or saving removes the pending reminder, and that a
    repeated notification update does not create another expense.
-5. Disable reminders and confirm further payments do not create Fin reminders.
+5. Disable reminders and confirm existing drafts remain and further payments do not create Fin reminders.
+6. Deny Fin notification permission, make a payment, and confirm the draft persists. Restore permission and reopen Fin to check the reminder is retried.
 
-Parser unit tests: after `npx expo prebuild --platform android`, run
+The listener scans still-active Wallet alerts after reconnecting. Enable purchase
+notifications in Google Wallet; Fin cannot detect a payment if Wallet never issues a
+readable alert. Fin Settings also checks whether the payment notification channel is
+blocked.
+
+Android capture, persistence and parser tests: after
+`npx expo prebuild --platform android`, run
 `cd apps/mobile/android && ./gradlew :fin-google-pay:testDebugUnitTest`.

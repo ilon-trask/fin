@@ -51,3 +51,6 @@ server-data/
 
 /apps/mobile/ios/
 /apps/mobile/android/
+
+# Local Expo module build outputs
+/apps/mobile/modules/*/android/build/

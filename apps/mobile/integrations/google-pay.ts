@@ -17,6 +17,8 @@ interface GooglePayNative {
   getStatus(): Status;
   setEnabled(enabled: boolean): void;
   getPending(): string[];
+  refresh(): void;
+  openNotificationSettings(): void;
   dismiss(id: string): void;
   openAccessSettings(): void;
 }
@@ -34,6 +36,8 @@ export const googlePay = {
         && !Number.isNaN(Date.parse(payment.date)) ? [payment as PaymentDraft] : [];
     } catch { return []; }
   }),
+  refresh: () => native?.refresh(),
+  openNotificationSettings: () => native?.openNotificationSettings(),
   dismiss: (id: string) => native?.dismiss(id),
   setEnabled: (enabled: boolean) => native?.setEnabled(enabled),
   openAccessSettings: () => native?.openAccessSettings(),

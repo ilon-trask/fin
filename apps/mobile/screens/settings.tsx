@@ -8,7 +8,7 @@ import { getRepository } from "@/data/db/client";
 import { googlePay } from "@/integrations/google-pay";
 import { Feather } from "@expo/vector-icons";
 import { useEffect, useRef, useState } from "react";
-import { Alert, AppState, Linking, ScrollView, StyleSheet, View } from "react-native";
+import { Alert, AppState, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function Settings({ onBack }: { onBack: () => void }) {
@@ -72,7 +72,7 @@ export default function Settings({ onBack }: { onBack: () => void }) {
             </View>
             <View style={styles.badge}><ThemedText style={styles.badgeText}>{payStatus.enabled ? "ON" : "OFF"}</ThemedText></View>
           </View>
-          <ThemedText style={styles.description}>Review an amount and choose a category after a Google Pay or Wallet payment notification.</ThemedText>
+          <ThemedText style={styles.description}>Detected payments are saved on this device for later review. Tap a reminder to choose a category and add the expense.</ThemedText>
           {!googlePay.available ? (
             <View style={styles.notice}>
               <Feather name="info" size={14} color={COLOR.muted} />
@@ -90,10 +90,11 @@ export default function Settings({ onBack }: { onBack: () => void }) {
                 <Button onPress={googlePay.openAccessSettings}><ThemedText style={styles.buttonText}>Allow notification access</ThemedText></Button>
               )}
               {payStatus.enabled && !payStatus.notificationsGranted && (
-                <Button onPress={() => Linking.openSettings()}><ThemedText style={styles.buttonText}>Allow Fin notifications</ThemedText></Button>
+                <Button onPress={googlePay.openNotificationSettings}><ThemedText style={styles.buttonText}>Allow Fin notifications</ThemedText></Button>
               )}
             </>
           )}
+          <ThemedText style={styles.description}>Keep purchase notifications enabled in Google Wallet. Turning off Fin reminders keeps payments already saved for review.</ThemedText>
           <View style={styles.divider} />
           <View style={styles.privacy}>
             <Feather name="shield" size={14} color={COLOR.muted} />

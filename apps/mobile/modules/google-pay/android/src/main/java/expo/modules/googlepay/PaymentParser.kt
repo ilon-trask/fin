@@ -1,16 +1,24 @@
 package expo.modules.googlepay
 
 object PaymentParser {
-  // Require outgoing-payment wording; amounts alone also occur in offers and requests.
-  private val paid = Regex("\\b(paid|payment successful|payment complete[d]?|you spent|you sent)\\b|\\b(bezahlt|zahlung erfolgreich|du hast bezahlt)\\b", RegexOption.IGNORE_CASE)
-  private val rejected = Regex("\\b(failed|declined|refund|refunded|received|request|requested|cashback|offer|fehlgeschlagen|abgelehnt|erstattung|erhalten|anfrage)\\b", RegexOption.IGNORE_CASE)
+  // Require outgoing-payment wording or Wallet's amount-at-merchant format.
+  private val paid = Regex("\\b(paid|payment successful|payment complete[d]?|you spent|you sent|purchase(?: successful| at)|payment at)\\b|\\b(bezahlt|zahlung erfolgreich|zahlung bei|kauf bei)\\b", RegexOption.IGNORE_CASE)
+  private val rejected = Regex("\\b(failed|declined|refund|refunded|received|request|requested|cashback|offer|pending|balance|fehlgeschlagen|abgelehnt|erstattung|erhalten|anfrage|ausstehend|guthaben)\\b", RegexOption.IGNORE_CASE)
   private val amount = Regex("(?:(EUR|USD|GBP|INR|€|\\$|£|₹)\\s*([0-9]+(?:[.,\\u00a0 ][0-9]+)*)|([0-9]+(?:[.,\\u00a0 ][0-9]+)*)\\s*(EUR|USD|GBP|INR|€|\\$|£|₹))", RegexOption.IGNORE_CASE)
-  fun parse(text: String): Pair<Double, String>? {
+  fun parse(rawText: String): Pair<Double, String>? {
+    val text = rawText.replace('\u202f', ' ').replace('\u00a0', ' ').replace(Regex("[\\u200e\\u200f\\u061c]"), "")
     if (Regex("-\\s*(?:EUR|USD|GBP|INR|€|\\$|£|₹|[0-9])").containsMatchIn(text)) return null
-    if (!paid.containsMatchIn(text) || rejected.containsMatchIn(text)) return null
+    if (rejected.containsMatchIn(text)) return null
     val matches = amount.findAll(text).toList()
     if (matches.size != 1) return null // Ambiguous totals need manual entry.
     val match = matches.single()
+    if (!paid.containsMatchIn(text)) {
+      val prefix = text.substring(0, match.range.first).trim()
+      val suffix = text.substring(match.range.last + 1).trim()
+      val walletHeading = Regex("(?:Google\\s+(?:Wallet|Pay)|GPay):?", RegexOption.IGNORE_CASE)
+      if ((prefix.isNotEmpty() && !walletHeading.matches(prefix)) ||
+        !Regex("^(?:at|bei)\\s+\\S", RegexOption.IGNORE_CASE).containsMatchIn(suffix)) return null
+    }
     val currency = (match.groups[1]?.value ?: match.groups[4]!!.value).uppercase()
     val raw = (match.groups[2]?.value ?: match.groups[3]!!.value).trim().replace(" ", "").replace("\u00a0", "")
     val decimal = when {
