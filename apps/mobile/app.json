@@ -2,8 +2,17 @@
   "name": "Fin",
   "slug": "fin",
   "backgroundColor": "#050505",
+  "icon": "./assets/images/icon.png",
   "android": {
-    "package": "com.myha.finsam"
+    "package": "com.myha.finsam",
+    "adaptiveIcon": {
+      "foregroundImage": "./assets/images/android-icon-foreground.png",
+      "monochromeImage": "./assets/images/android-icon-monochrome.png",
+      "backgroundColor": "#050505"
+    }
+  },
+  "web": {
+    "favicon": "./assets/images/favicon.png"
   },
   "plugins": [
     "@react-native-community/datetimepicker",
