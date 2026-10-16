@@ -6,6 +6,23 @@ An offline expense tracker in an npm workspaces monorepo. Requires Node.js 22+.
 - `apps/server`: Hono API on Node.js, Drizzle + SQLite (`better-sqlite3`).
 - `packages/shared`: shared Zod entity schemas and sync protocol.
 
+## Code layout
+
+- `apps/mobile/app/index.tsx` composes the three screens. The pager gesture
+  lives in `hooks/use-screen-pager.ts`.
+- `screens/main.tsx` owns expense, category, and payment actions. Its display
+  sections live in `components/main-sections.tsx`, and sheet gestures live in
+  `hooks/use-expense-sheet.ts`.
+- `utils/analytics-summary.ts` calculates the period totals and chart data
+  shown by `screens/analytics.tsx`.
+- `data/db/repository.ts` owns local transactions and the outbox. The sync
+  service schedules requests; the sync engine exchanges one batch with the server.
+- `apps/server/src/app.ts` handles HTTP validation and authentication, while
+  `store.ts` applies sync batches and serves paginated changes.
+
+Run `npm run typecheck`, `npm test`, and `npm run lint` from the repository root
+when changing shared data or screen behavior.
+
 ## Run locally
 
 ```sh

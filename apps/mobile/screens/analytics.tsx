@@ -3,24 +3,17 @@ import { TopBar, TopBarButton } from "@/components/ui/top-bar";
 import { COLOR } from "@/constants/tokens";
 import { StorageKeyKind, storageRead, subscribeStorage } from "@/data/storage";
 import { Category, Expense } from "@/types/entities";
-import { addDays, isInWeek, startOfWeek, weekLabel } from "@/utils/analytics-period";
+import { addDays, startOfWeek, weekLabel } from "@/utils/analytics-period";
+import { buildAnalyticsSummary, type AnalyticsPeriod } from "@/utils/analytics-summary";
 import { Feather } from "@expo/vector-icons";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AppState, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-
-// Older expenses used a day/month/year date instead of ISO.
-function expenseDate(value: string) {
-  const legacy = /^(\d{2})\/(\d{2})\/(\d{4})/.exec(value);
-  return legacy
-    ? new Date(Number(legacy[3]), Number(legacy[2]) - 1, Number(legacy[1]))
-    : new Date(value);
-}
 
 export default function Analytics({ active, onBack }: { active: boolean; onBack: () => void }) {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [period, setPeriod] = useState<"week" | "month" | "all">("month");
+  const [period, setPeriod] = useState<AnalyticsPeriod>("month");
   const [selectedMonth, setSelectedMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   const [selectedWeek, setSelectedWeek] = useState(() => startOfWeek(new Date()));
   const [periodPickerOpen, setPeriodPickerOpen] = useState(false);
@@ -55,7 +48,8 @@ export default function Analytics({ active, onBack }: { active: boolean; onBack:
     return () => { cancelled = true; unsubscribe(); subscription.remove(); };
   }, [active]);
 
-  const currencies = [...new Set(expenses.map((item) => item.currency ?? ""))];
+  const categoriesById = useMemo(() => new Map(categories.map((category) => [category.id, category])), [categories]);
+  const currencies = useMemo(() => [...new Set(expenses.map((item) => item.currency ?? ""))], [expenses]);
   const selectedCurrency = currencies.includes(currency) ? currency : (currencies[0] ?? "");
   const money = (amount: number) => `${selectedCurrency ? `${selectedCurrency} ` : ""}${amount.toFixed(2)}`;
   const now = new Date();
@@ -69,32 +63,10 @@ export default function Analytics({ active, onBack }: { active: boolean; onBack:
     else setSelectedMonth(new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + offset, 1));
     setPeriodPickerOpen(false);
   };
-  const currencyExpenses = expenses.filter((item) => (item.currency ?? "") === selectedCurrency);
-  const filtered = currencyExpenses.filter((item) => {
-    if (period === "all") return true;
-    const date = expenseDate(item.date);
-    if (period === "week") return isInWeek(date, selectedWeek);
-    return date.getFullYear() === selectedMonth.getFullYear() && date.getMonth() === selectedMonth.getMonth();
-  });
-  const total = filtered.reduce((sum, item) => sum + item.amount, 0);
-  const grouped = new Map<string, number>();
-  filtered.forEach((item) => grouped.set(item.categoryId, (grouped.get(item.categoryId) ?? 0) + item.amount));
-  const breakdown = [...grouped.entries()].sort((a, b) => b[1] - a[1]);
-  const trend = Array.from({ length: 6 }, (_, index) => {
-    if (period === "week") {
-      const date = addDays(selectedWeek, (index - 5) * 7);
-      const amount = currencyExpenses.reduce((sum, item) => isInWeek(expenseDate(item.date), date) ? sum + item.amount : sum, 0);
-      return { label: date.toLocaleDateString("default", { day: "numeric", month: "short" }), accessibleLabel: weekLabel(date), amount };
-    }
-    const end = period === "month" ? selectedMonth : now;
-    const date = new Date(end.getFullYear(), end.getMonth() - 5 + index, 1);
-    const amount = currencyExpenses.reduce((sum, item) => {
-      const spent = expenseDate(item.date);
-      return spent.getMonth() === date.getMonth() && spent.getFullYear() === date.getFullYear()
-        ? sum + item.amount : sum;
-    }, 0);
-    return { label: date.toLocaleString("default", { month: "short" }), accessibleLabel: date.toLocaleString("default", { month: "long", year: "numeric" }), amount };
-  });
+  const { count, total, breakdown, trend } = useMemo(
+    () => buildAnalyticsSummary(expenses, selectedCurrency, period, selectedWeek, selectedMonth, new Date()),
+    [expenses, selectedCurrency, period, selectedWeek, selectedMonth],
+  );
   const maxTrend = Math.max(...trend.map((item) => item.amount), 1);
   const trendCaption = period === "week"
     ? (isCurrentWeek ? "Last 6 weeks" : `6 weeks ending ${weekLabel(selectedWeek)}`)
@@ -172,8 +144,8 @@ export default function Analytics({ active, onBack }: { active: boolean; onBack:
               <ThemedText style={styles.description}>Total spent · {periodLabel}</ThemedText>
               <ThemedText style={styles.total} adjustsFontSizeToFit numberOfLines={1}>{money(total)}</ThemedText>
               <View style={styles.stats}>
-                <View style={styles.stat}><ThemedText style={styles.statValue}>{filtered.length}</ThemedText><ThemedText style={styles.caption}>Expenses</ThemedText></View>
-                <View style={styles.stat}><ThemedText style={styles.statValue}>{money(filtered.length ? total / filtered.length : 0)}</ThemedText><ThemedText style={styles.caption}>Average expense</ThemedText></View>
+                <View style={styles.stat}><ThemedText style={styles.statValue}>{count}</ThemedText><ThemedText style={styles.caption}>Expenses</ThemedText></View>
+                <View style={styles.stat}><ThemedText style={styles.statValue}>{money(count ? total / count : 0)}</ThemedText><ThemedText style={styles.caption}>Average expense</ThemedText></View>
               </View>
             </View>
             <View style={styles.card}>
@@ -200,7 +172,7 @@ export default function Analytics({ active, onBack }: { active: boolean; onBack:
               ) : (
                 <View style={styles.card}>
                   {breakdown.map(([id, amount]) => {
-                    const category = categories.find((item) => item.id === id);
+                    const category = categoriesById.get(id);
                     const share = amount / total * 100;
                     return (
                       <View key={id} style={styles.category}>

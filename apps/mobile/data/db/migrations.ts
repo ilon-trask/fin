@@ -4,6 +4,8 @@ CREATE TABLE records (kind TEXT NOT NULL, id TEXT NOT NULL, payload TEXT NOT NUL
 CREATE TABLE outbox (operation_id TEXT PRIMARY KEY NOT NULL, kind TEXT NOT NULL, id TEXT NOT NULL, payload TEXT NOT NULL, deleted INTEGER NOT NULL, sequence INTEGER NOT NULL);
 CREATE INDEX outbox_sequence ON outbox(sequence);
 CREATE TABLE metadata (key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL);
+` }, { version: 2, sql: `
+CREATE INDEX outbox_record ON outbox(kind, id);
 ` }];
 export function migrateDatabase(sqlite: { execSync(sql: string): void; getFirstSync<T>(sql: string): T | null }) {
   sqlite.execSync("PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000;");

@@ -8,7 +8,7 @@ import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import type { ExpoSQLiteDatabase } from "drizzle-orm/expo-sqlite";
 import { createRepository } from "../apps/mobile/data/db/repository";
-import { migrateDatabase } from "../apps/mobile/data/db/migrations";
+import { migrateDatabase, migrations } from "../apps/mobile/data/db/migrations";
 import { createSyncStore } from "../apps/server/src/store";
 import { createApp } from "../apps/server/src/app";
 import { parseCollection } from "@fin/shared";
@@ -233,4 +233,108 @@ test("Expo SQLite web bridge preserves result lengths above 255 bytes", async ()
   assert.ok(length > 700);
   const text = new TextDecoder().decode(new Uint8Array(resultBuffer, 4, length));
   assert.doesNotThrow(() => JSON.parse(text));
+});
+
+
+test("unchanged writes and empty sync polls do not notify data subscribers", () => {
+  const a = client();
+  const server = createSyncStore(":memory:");
+  try {
+    a.repository.upsert("categories", category);
+    sync(a.repository, server);
+    let notifications = 0;
+    a.repository.subscribe(() => notifications++);
+    a.repository.upsert("categories", category);
+    a.repository.replace("categories", [category]);
+    a.repository.remove("categories", "missing");
+    sync(a.repository, server);
+    assert.equal(notifications, 0);
+    assert.equal(a.repository.pendingCount(), 0);
+    assert.ok(a.repository.meta("last-sync"));
+    a.repository.remove("categories", category.id);
+    a.repository.remove("categories", category.id);
+    assert.equal(notifications, 1);
+    assert.equal(a.repository.pendingCount(), 1);
+  } finally { a.close(); server.close(); }
+});
+
+test("deleted payment reminders stay deleted for both original and new record IDs", () => {
+  const a = client();
+  const expense = { id: "payment-expense", amount: 10, date: "2026-01-01", categoryId: category.id, sourcePaymentId: "payment" };
+  try {
+    a.repository.upsert("expenses", expense);
+    a.repository.remove("expenses", expense.id);
+    const pending = a.repository.pendingCount();
+    a.repository.upsert("expenses", expense);
+    a.repository.upsert("expenses", { ...expense, id: "replayed" });
+    assert.deepEqual(a.repository.list("expenses"), []);
+    assert.equal(a.repository.pendingCount(), pending);
+  } finally { a.close(); }
+});
+
+test("paged reads and replacement preserve records across collection boundaries", () => {
+  const a = client();
+  try {
+    const categories = Array.from({ length: 205 }, (_, i) => ({ ...category, id: `category-${i}` }));
+    const expenses = Array.from({ length: 105 }, (_, i) => ({ id: `expense-${i}`, amount: i + 1, date: "2026-01-01", categoryId: category.id }));
+    a.repository.replace("categories", categories);
+    a.repository.replace("expenses", expenses);
+    const backup = parseBackup(a.repository.exportBackup());
+    assert.equal(backup.categories.length, 205);
+    assert.equal(backup.expenses.length, 105);
+    const replacement = [{ ...categories[0], name: "Edited" }, { ...category, id: "new" }];
+    a.repository.replace("categories", replacement);
+    assert.deepEqual(a.repository.list("categories"), replacement);
+    assert.equal(a.repository.list("expenses").length, 105);
+    const before = a.repository.pendingCount();
+    a.repository.requeueAll();
+    assert.equal(a.repository.pendingCount() - before, 311);
+  } finally { a.close(); }
+});
+
+test("incomplete, duplicate and foreign HTTP acknowledgements preserve queued edits", async () => {
+  const { exchange } = await import("../apps/mobile/data/sync/engine");
+  const a = client();
+  const originalFetch = globalThis.fetch;
+  try {
+    a.repository.upsert("categories", category);
+    a.repository.upsert("categories", { ...category, id: "second" });
+    const ids = a.repository.pending().map((operation) => operation.operationId);
+    for (const acknowledged of [[], [ids[0]], [ids[0], ids[0]], [ids[0], "foreign"]]) {
+      globalThis.fetch = async () => Response.json({ acknowledged, changes: [], cursor: 1, hasMore: false });
+      await assert.rejects(exchange(a.repository, "https://sync.example", "token"), /acknowledge/);
+      assert.equal(a.repository.pendingCount(), 2);
+      assert.equal(a.repository.cursor(), 0);
+    }
+  } finally { globalThis.fetch = originalFetch; a.close(); }
+});
+
+test("sync cursor conflicts return HTTP 409", async () => {
+  const server = createSyncStore(":memory:");
+  const headers = { Authorization: "Bearer token", "Content-Type": "application/json" };
+  try {
+    const app = createApp(server, "token");
+    const response = await app.request("/sync", { method: "POST", headers, body: JSON.stringify({ cursor: 1, operations: [] }) });
+    assert.equal(response.status, 409);
+    assert.match((await response.json()).error, /Cursor exceeds/);
+  } finally { server.close(); }
+});
+
+
+test("version 1 databases upgrade without losing records or queued edits", () => {
+  const sqlite = new Database(":memory:");
+  try {
+    sqlite.exec(migrations[0].sql);
+    sqlite.pragma("user_version = 1");
+    sqlite.prepare("INSERT INTO records VALUES (?, ?, ?, ?)").run("categories", category.id, JSON.stringify(category), 0);
+    sqlite.prepare("INSERT INTO outbox VALUES (?, ?, ?, ?, ?, ?)").run("pending", "categories", category.id, JSON.stringify(category), 0, 1);
+    const adapter = { execSync: (sql: string) => { sqlite.exec(sql); }, getFirstSync: <T>(sql: string) => sqlite.prepare(sql).get() as T };
+    migrateDatabase(adapter);
+    migrateDatabase(adapter);
+    assert.equal(sqlite.pragma("user_version", { simple: true }), 2);
+    assert.equal((sqlite.prepare("SELECT count(*) AS count FROM records").get() as { count: number }).count, 1);
+    assert.equal((sqlite.prepare("SELECT count(*) AS count FROM outbox").get() as { count: number }).count, 1);
+    const indexes = sqlite.prepare("PRAGMA index_list(outbox)").all() as { name: string }[];
+    assert.ok(indexes.some((index) => index.name === "outbox_record"));
+  } finally { sqlite.close(); }
 });

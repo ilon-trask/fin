@@ -2,7 +2,7 @@ import { COLOR } from "@/constants/tokens";
 import React from "react";
 import { StyleSheet, Text, TextProps as TNTextProps } from "react-native";
 
-interface TextProps extends TNTextProps {}
+type TextProps = TNTextProps;
 
 function ThemedText({ children, style, ...props }: TextProps) {
   return (

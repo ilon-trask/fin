@@ -1,13 +1,13 @@
 import { LinearGradient } from "expo-linear-gradient";
-import React, { useRef, useState } from "react";
+import { useRef, useState } from "react";
 import {
-    GestureResponderEvent,
-    Platform,
-    StyleSheet,
-    View,
+  GestureResponderEvent,
+  Platform,
+  StyleSheet,
+  View,
 } from "react-native";
 
-const colors = [
+const colorStops = [
   [182, 150, 152], // rose
   [202, 135, 122], // coral
   [185, 126, 102], // terracotta
@@ -30,33 +30,19 @@ const colors = [
   [182, 150, 152], // rose
 ];
 
-export const customColorGradient = colors.map(
+export const customColorGradient = colorStops.map(
   ([r, g, b]) => `rgb(${r}, ${g}, ${b})`,
 ) as [string, string, ...string[]];
 export const defaultCustomColor = customColorGradient[0];
 
-function getColorAtPosition(t: number, stops: number[][]) {
+function getColorAtPosition(position: number, stops: number[][]) {
   const segmentCount = stops.length - 1;
-
-  const segment = Math.min(
-    Math.floor(t * segmentCount),
-
-    segmentCount - 1,
-  );
-
-  const localT = t * segmentCount - segment;
-
-  const c1 = stops[segment];
-
-  const c2 = stops[segment + 1];
-
-  const r = Math.round(c1[0] + (c2[0] - c1[0]) * localT);
-
-  const g = Math.round(c1[1] + (c2[1] - c1[1]) * localT);
-
-  const b = Math.round(c1[2] + (c2[2] - c1[2]) * localT);
-
-  return [r, g, b];
+  const segment = Math.min(Math.floor(position * segmentCount), segmentCount - 1);
+  const fraction = position * segmentCount - segment;
+  const start = stops[segment];
+  const end = stops[segment + 1];
+  return start.map((component, index) =>
+    Math.round(component + (end[index] - component) * fraction));
 }
 
 function toRgb(color: number[]) {
@@ -77,12 +63,12 @@ function ColorSlider({
   const [left, setLeft] = useState(0);
   const [width, setWidth] = useState(0);
 
-  const getX = (e: GestureResponderEvent) => {
+  const updateFromGesture = (event: GestureResponderEvent) => {
     if (width <= 0) return;
-    const x = Math.max(0, Math.min(width, e.nativeEvent.pageX - left));
+    const x = Math.max(0, Math.min(width, event.nativeEvent.pageX - left));
     onChange(x / width);
   };
-  const ref: React.Ref<View> = useRef(null);
+  const ref = useRef<View>(null);
   return (
     <View
       ref={ref}
@@ -103,8 +89,8 @@ function ColorSlider({
       onStartShouldSetResponder={() => true}
       onMoveShouldSetResponder={() => true}
       onResponderTerminationRequest={() => false}
-      onResponderGrant={getX}
-      onResponderMove={getX}
+      onResponderGrant={updateFromGesture}
+      onResponderMove={updateFromGesture}
     >
       <View
         pointerEvents="none"
@@ -138,7 +124,7 @@ export default function ColorPicker({ giveColor }: { giveColor: (color: string) 
     <ColorSlider label="Color" gradient={customColorGradient} position={hue}
       onChange={(position) => {
         setHue(position);
-        giveColor(toRgb(getColorAtPosition(position, colors)));
+        giveColor(toRgb(getColorAtPosition(position, colorStops)));
       }} />
   );
 }
