@@ -2,6 +2,12 @@ export const SIZE = {
   64: 64,
 };
 
+export const SCREEN_LAYOUT = {
+  paddingHorizontal: 24,
+  paddingTop: 16,
+  gap: 28,
+};
+
 export const COLOR = {
   bg: "#050505",
   surface: "#101010",

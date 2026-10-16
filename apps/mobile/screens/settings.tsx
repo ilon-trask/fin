@@ -1,7 +1,7 @@
 import Button from "@/components/ui/button";
 import ThemedText from "@/components/ui/themed-text";
 import { TopBar, TopBarButton } from "@/components/ui/top-bar";
-import { COLOR } from "@/constants/tokens";
+import { COLOR, SCREEN_LAYOUT } from "@/constants/tokens";
 import { backupFilename, parseBackup } from "@/data/backup";
 import { pickBackupFile, saveBackupFile } from "@/data/backup-files";
 import { getRepository } from "@/data/db/client";
@@ -128,10 +128,10 @@ export default function Settings({ onBack }: { onBack: () => void }) {
 
 const styles = StyleSheet.create({
   main: { flex: 1, backgroundColor: COLOR.bg },
-  content: { width: "100%", maxWidth: 600, alignSelf: "center", paddingHorizontal: 24, paddingTop: 16, paddingBottom: 32, gap: 18 },
+  content: { ...SCREEN_LAYOUT, width: "100%", maxWidth: 600, alignSelf: "center", paddingBottom: 32 },
   heading: { fontSize: 22, letterSpacing: -0.7, fontWeight: "600" },
   description: { color: COLOR.muted, fontSize: 13, lineHeight: 20 },
-  sectionLabel: { color: COLOR.muted, fontSize: 10, letterSpacing: 1.4, marginTop: 8 },
+  sectionLabel: { color: COLOR.muted, fontSize: 10, letterSpacing: 1.4 },
   card: { borderWidth: 1, borderColor: COLOR.border, borderRadius: 10, backgroundColor: COLOR.surface, padding: 18, gap: 18 },
   cardHeader: { flexDirection: "row", alignItems: "center", gap: 12 },
   icon: { width: 40, height: 40, backgroundColor: COLOR.elevated, borderRadius: 8, alignItems: "center", justifyContent: "center" },

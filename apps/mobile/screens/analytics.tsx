@@ -1,6 +1,6 @@
 import ThemedText from "@/components/ui/themed-text";
 import { TopBar, TopBarButton } from "@/components/ui/top-bar";
-import { COLOR } from "@/constants/tokens";
+import { COLOR, SCREEN_LAYOUT } from "@/constants/tokens";
 import { StorageKeyKind, storageRead, subscribeStorage } from "@/data/storage";
 import { Category, Expense } from "@/types/entities";
 import { addDays, startOfWeek, weekLabel } from "@/utils/analytics-period";
@@ -198,7 +198,7 @@ export default function Analytics({ active, onBack }: { active: boolean; onBack:
 
 const styles = StyleSheet.create({
   main: { flex: 1, backgroundColor: COLOR.bg },
-  content: { width: "100%", maxWidth: 600, alignSelf: "center", paddingHorizontal: 24, paddingTop: 16, paddingBottom: 24, gap: 28 },
+  content: { ...SCREEN_LAYOUT, width: "100%", maxWidth: 600, alignSelf: "center", paddingBottom: 24 },
   heading: { fontSize: 22, fontWeight: "600", letterSpacing: -0.7 },
   description: { fontSize: 13, lineHeight: 20, color: COLOR.muted },
   periodControl: { backgroundColor: COLOR.surface, borderWidth: 1, borderColor: COLOR.border, borderRadius: 12, padding: 8 },

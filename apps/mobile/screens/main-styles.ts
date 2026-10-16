@@ -1,5 +1,5 @@
 import { StyleSheet } from "react-native";
-import { COLOR } from "@/constants/tokens";
+import { COLOR, SCREEN_LAYOUT } from "@/constants/tokens";
 
 export const styles = StyleSheet.create({
   main: { flex: 1, backgroundColor: COLOR.bg },
@@ -7,7 +7,7 @@ export const styles = StyleSheet.create({
   content: { width: "100%", maxWidth: 600, alignSelf: "center" },
   expenseSheet: { position: "absolute", top: 0, width: "100%", maxWidth: 600, alignSelf: "center", zIndex: 1 },
   sheetHandle: { width: 32, height: 3, borderRadius: 2, backgroundColor: COLOR.muted, alignSelf: "center", marginBottom: 2 },
-  overview: { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 28, gap: 28, backgroundColor: COLOR.bg, zIndex: 0 },
+  overview: { ...SCREEN_LAYOUT, paddingBottom: 28, backgroundColor: COLOR.bg, zIndex: 0 },
   scrollingContent: { paddingHorizontal: 24, paddingBottom: 32, gap: 28, backgroundColor: "transparent", zIndex: 1 },
   brand: { fontSize: 22, fontWeight: "800", letterSpacing: -1 },
   brandBadge: { borderRadius: 4, backgroundColor: COLOR.surface, paddingHorizontal: 7, paddingVertical: 4 },
