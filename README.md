@@ -225,3 +225,55 @@ reloading JavaScript alone will not update capture behavior.
 Android capture, persistence and parser tests: after
 `npx expo prebuild --platform android`, run
 `cd apps/mobile/android && ./gradlew :fin-google-pay:testDebugUnitTest`.
+
+### PostHog payment diagnostics
+
+The native listener uses the [PostHog Android SDK](https://posthog.com/docs/libraries/android)
+so diagnostics can be sent while Fin's JavaScript is not running. The public
+**project token** and EU host are configured in
+`apps/mobile/modules/google-pay/posthog.config.json` for local and EAS builds.
+This is client configuration, not a personal API key. To override the project
+for a particular build, set the build environment:
+
+```sh
+POSTHOG_PROJECT_TOKEN=phc_your_project_token npm run android
+```
+
+For EAS overrides, set `POSTHOG_PROJECT_TOKEN` in the EAS environment used by the build.
+`POSTHOG_HOST` can be overridden in the same environment. Explicitly setting
+`POSTHOG_PROJECT_TOKEN` to an empty string disables event delivery. These values are baked
+into the APK: rebuild and install after configuring them. Reopening Fin then emits
+`google_pay_refresh_requested`, which can verify ingestion before a real payment.
+
+The same Android SDK runs in native development/debug builds (`npm run android`)
+and the EAS preview APK; no PostHog React Native package is required. Browser
+previews and Expo Go cannot load the native Google Pay module or send these events.
+Rebuild the native app after adding or changing this integration. Events include
+`build_type` (`debug` or `release`) to distinguish native build variants.
+
+Events use the `google_pay_` prefix:
+
+- `enabled_changed`, `settings_opened`, `refresh_requested`, `rebind_requested`:
+  setup and reconnect attempts, with permission and connection snapshots.
+  `google_pay_enabled_changed` fires on each actual in-app on/off change with
+  `previous_enabled`, `requested_enabled`, and the resulting `enabled` state.
+- `listener_connected`, `listener_disconnected`, `listener_destroyed`, `recovery`:
+  Android service lifecycle and recovery scan results.
+- `notification_received`, `notification_processed`, `notification_error`:
+  candidate alert receipt, source/parser outcome, saved/duplicate/storage failure,
+  or exception class. Unrelated app notifications produce no events.
+- `reminder_result`: `posted`, `permission_blocked`, `channel_blocked`, or
+  `launch_unavailable`. `posted` means Android accepted the notification; it does
+  not guarantee a visible banner or sound.
+
+To investigate a payment, search around the supplied timestamp and timezone using
+`occurred_at_ms` and `notification_posted_at_ms`. Follow `attempt_id` through receipt,
+processing and reminder events, or `payment_id` across retries. `origin` distinguishes
+live delivery from a recovery scan. Events also include Android version, permission
+states, channel blocking, listener connection and notification field-presence flags.
+The SDK attaches an anonymous installation ID and app/device metadata; automatic
+screen/deep-link/lifecycle capture, replay and exception capture are disabled.
+Notification text, merchant names, card details, amounts and currencies are not sent.
+The SDK queues delivery; telemetry failures do not block payment capture. Absence of
+events alone cannot distinguish no Wallet alert from a killed listener or an offline
+device, so also inspect the latest connection and permission events.
