@@ -26,14 +26,25 @@ object PaymentStore {
 
   fun enabled(context: Context) = prefs(context).getBoolean("enabled", false)
   @Synchronized fun setEnabled(context: Context, enabled: Boolean) {
+    val previous = enabled(context)
     prefs(context).edit().putBoolean("enabled", enabled).apply()
     if (!enabled) {
       pending(context).forEach { dismiss(context, it.getString("id")) }
+    }
+    if (previous != enabled) {
+      PaymentTelemetry.capture(context, "enabled_changed", mapOf(
+        "previous_enabled" to previous,
+        "requested_enabled" to enabled
+      ))
     }
   }
   @Synchronized fun pending(context: Context): List<JSONObject> {
     val array = JSONArray(prefs(context).getString("pending", "[]"))
     return (0 until array.length()).map { array.getJSONObject(it) }
+  }
+  @Synchronized fun hasSeen(context: Context, id: String): Boolean {
+    val seen = JSONArray(prefs(context).getString("seen", "[]"))
+    return (0 until seen.length()).any { seen.getString(it) == id }
   }
   @Synchronized fun add(context: Context, payment: JSONObject): Boolean {
     if (!enabled(context)) return false

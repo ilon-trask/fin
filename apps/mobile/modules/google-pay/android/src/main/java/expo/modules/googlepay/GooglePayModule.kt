@@ -29,6 +29,7 @@ class GooglePayModule : Module() {
     }
     Function("refresh") { PaymentNotificationListener.refresh(context) }
     Function("openNotificationSettings") {
+      PaymentTelemetry.capture(context, "settings_opened", mapOf("settings" to "notifications"))
       val channel = if (Build.VERSION.SDK_INT >= 26) context.getSystemService(NotificationManager::class.java).getNotificationChannel(PaymentNotificationListener.CHANNEL_ID) else null
       val intent = if (channel != null) Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS)
         .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
@@ -40,6 +41,7 @@ class GooglePayModule : Module() {
     Function("getPending") { PaymentStore.pending(context).map { it.toString() } }
     Function("dismiss") { id: String -> PaymentStore.remove(context, id) }
     Function("openAccessSettings") {
+      PaymentTelemetry.capture(context, "settings_opened", mapOf("settings" to "listener_access"))
       val intent = if (android.os.Build.VERSION.SDK_INT >= 30) {
         Intent(Settings.ACTION_NOTIFICATION_LISTENER_DETAIL_SETTINGS).putExtra(Settings.EXTRA_NOTIFICATION_LISTENER_COMPONENT_NAME, ComponentName(context, PaymentNotificationListener::class.java).flattenToString())
       } else Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)

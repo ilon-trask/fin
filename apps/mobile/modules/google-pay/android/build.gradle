@@ -4,12 +4,23 @@ plugins {
 }
 group = 'expo.modules.googlepay'
 version = '1.0.0'
+// The project token is public client configuration and ships in the APK.
+def posthogConfig = new groovy.json.JsonSlurper().parse(file('../posthog.config.json'))
 android {
   namespace 'expo.modules.googlepay'
-  defaultConfig { versionCode 1; versionName '1.0.0' }
+  buildFeatures { buildConfig true }
+  defaultConfig {
+    versionCode 1; versionName '1.0.0'
+    // Public project token, never a personal API key. Available to local and EAS builds.
+    buildConfigField 'String', 'POSTHOG_PROJECT_TOKEN', groovy.json.JsonOutput.toJson(System.getenv().getOrDefault('POSTHOG_PROJECT_TOKEN', posthogConfig.projectToken))
+    buildConfigField 'String', 'POSTHOG_HOST', groovy.json.JsonOutput.toJson(System.getenv().getOrDefault('POSTHOG_HOST', posthogConfig.host))
+  }
   testOptions { unitTests.includeAndroidResources = true }
 }
-dependencies { implementation 'androidx.core:core-ktx:1.17.0' }
+dependencies {
+  implementation 'androidx.core:core-ktx:1.17.0'
+  implementation 'com.posthog:posthog-android:3.46.0'
+}
 dependencies {
   testImplementation 'junit:junit:4.13.2'
   testImplementation 'org.robolectric:robolectric:4.17'

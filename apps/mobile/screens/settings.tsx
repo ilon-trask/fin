@@ -141,7 +141,7 @@ export default function Settings({ onBack }: { onBack: () => void }) {
           <View style={styles.divider} />
           <View style={styles.privacy}>
             <Feather name="shield" size={14} color={COLOR.muted} />
-            <ThemedText style={styles.privacyText}>Notification access lets Fin read notifications. Only matching Google Pay / Wallet alerts are stored, locally on your device.</ThemedText>
+            <ThemedText style={styles.privacyText}>Notification access lets Fin read notifications. Matching payment details stay on your device. When diagnostics are configured, Fin sends timestamps, permission states and processing outcomes to PostHog, without notification text or payment amounts.</ThemedText>
           </View>
         </View>
 
