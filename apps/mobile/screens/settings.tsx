@@ -11,6 +11,23 @@ import { useEffect, useRef, useState } from "react";
 import { Alert, AppState, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+const captureOutcomes: Record<string, string> = {
+  payment_saved: "Payment saved for review.",
+  source_filtered: "Alert skipped: its source could not be identified as Google Pay or Wallet.",
+  non_payment: "Alert skipped: it describes a balance, offer, refund, or an unsuccessful or incoming payment.",
+  no_amount: "Alert skipped: no readable supported currency amount was found.",
+  negative_amount: "Alert skipped: it contains a negative amount.",
+  invalid_amount: "Alert skipped: its amount could not be read.",
+  ambiguous_amount: "Alert skipped: it contains different amounts or currencies.",
+  unrecognized_format: "Alert skipped: its payment wording or layout was not recognized.",
+};
+const reminderOutcomes: Record<string, string> = {
+  posted: "Last reminder sent to Android.",
+  permission_blocked: "Payment saved, but Fin notifications are blocked. Allow notifications to retry.",
+  channel_blocked: "Payment saved, but the Google Pay payments notification channel is blocked. Allow notifications to retry.",
+  launch_unavailable: "Payment saved, but its reminder could not open Fin. Reopen the app to retry.",
+};
+
 export default function Settings({ onBack }: { onBack: () => void }) {
   const [payStatus, setPayStatus] = useState(googlePay.status);
   const [transfer, setTransfer] = useState<"import" | "export" | null>(null);
@@ -41,8 +58,15 @@ export default function Settings({ onBack }: { onBack: () => void }) {
     }
   }
   useEffect(() => {
-    const subscription = AppState.addEventListener("change", () => setPayStatus(googlePay.status()));
-    return () => subscription.remove();
+    googlePay.refresh();
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") googlePay.refresh();
+      setPayStatus(googlePay.status());
+    });
+    const timer = setInterval(() => {
+      if (AppState.currentState === "active") setPayStatus(googlePay.status());
+    }, 3000);
+    return () => { subscription.remove(); clearInterval(timer); };
   }, []);
   async function enableGooglePay() {
     try {
@@ -70,7 +94,7 @@ export default function Settings({ onBack }: { onBack: () => void }) {
               <ThemedText style={styles.title}>Google Pay</ThemedText>
               <ThemedText style={styles.description}>Payment reminders</ThemedText>
             </View>
-            <View style={styles.badge}><ThemedText style={styles.badgeText}>{payStatus.enabled ? "ON" : "OFF"}</ThemedText></View>
+            <View style={styles.badge}><ThemedText style={styles.badgeText}>{!payStatus.enabled ? "OFF" : !payStatus.accessGranted ? "SETUP" : !payStatus.notificationsGranted ? "BLOCKED" : payStatus.listenerConnected ? "READY" : "WAITING"}</ThemedText></View>
           </View>
           <ThemedText style={styles.description}>Detected payments are saved on this device for later review. Tap a reminder to choose a category and add the expense.</ThemedText>
           {!googlePay.available ? (
@@ -91,6 +115,25 @@ export default function Settings({ onBack }: { onBack: () => void }) {
               )}
               {payStatus.enabled && !payStatus.notificationsGranted && (
                 <Button onPress={googlePay.openNotificationSettings}><ThemedText style={styles.buttonText}>Allow Fin notifications</ThemedText></Button>
+              )}
+              {payStatus.enabled && payStatus.accessGranted && !payStatus.listenerConnected && (
+                <>
+                  <ThemedText style={styles.description}>Android has not connected payment reminders. Try reconnecting, or turn Fin notification access off and on in Android settings.</ThemedText>
+                  <Button onPress={() => { googlePay.refresh(); setPayStatus(googlePay.status()); }}><ThemedText style={styles.buttonText}>Reconnect reminders</ThemedText></Button>
+                  <Button onPress={googlePay.openAccessSettings}><ThemedText style={styles.buttonText}>Open notification access</ThemedText></Button>
+                </>
+              )}
+              {payStatus.enabled && payStatus.listenerConnected && (
+                <ThemedText style={styles.description}>Connected and listening for payment alerts.</ThemedText>
+              )}
+              {payStatus.lastEventAt !== null && (
+                <ThemedText style={styles.description}>Last Google alert: {new Date(payStatus.lastEventAt).toLocaleString()}. {captureOutcomes[payStatus.lastOutcome ?? ""] ?? "Awaiting a recognizable payment alert."}</ThemedText>
+              )}
+              {payStatus.lastCapturedAt !== null && (
+                <ThemedText style={styles.description}>Last payment saved: {new Date(payStatus.lastCapturedAt).toLocaleString()}.</ThemedText>
+              )}
+              {payStatus.lastReminderOutcome !== null && (
+                <ThemedText style={styles.description}>{reminderOutcomes[payStatus.lastReminderOutcome] ?? "Reminder status unavailable."}</ThemedText>
               )}
             </>
           )}

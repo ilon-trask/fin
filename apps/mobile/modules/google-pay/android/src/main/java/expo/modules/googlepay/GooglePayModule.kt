@@ -16,9 +16,12 @@ class GooglePayModule : Module() {
     Name("FinGooglePay")
     Function("getStatus") {
       mapOf("enabled" to PaymentStore.enabled(context),
-        "accessGranted" to NotificationManagerCompat.getEnabledListenerPackages(context).contains(context.packageName),
+        "listenerConnected" to PaymentNotificationListener.isConnected(),
+        "accessGranted" to (if (Build.VERSION.SDK_INT >= 27)
+          context.getSystemService(NotificationManager::class.java).isNotificationListenerAccessGranted(ComponentName(context, PaymentNotificationListener::class.java))
+          else NotificationManagerCompat.getEnabledListenerPackages(context).contains(context.packageName)),
         "notificationsGranted" to (NotificationManagerCompat.from(context).areNotificationsEnabled() &&
-          (Build.VERSION.SDK_INT < 26 || context.getSystemService(NotificationManager::class.java).getNotificationChannel(PaymentNotificationListener.CHANNEL_ID)?.importance != NotificationManager.IMPORTANCE_NONE)))
+          (Build.VERSION.SDK_INT < 26 || context.getSystemService(NotificationManager::class.java).getNotificationChannel(PaymentNotificationListener.CHANNEL_ID)?.importance != NotificationManager.IMPORTANCE_NONE))) + PaymentStore.diagnostics(context)
     }
     Function("setEnabled") { enabled: Boolean ->
       PaymentStore.setEnabled(context, enabled)

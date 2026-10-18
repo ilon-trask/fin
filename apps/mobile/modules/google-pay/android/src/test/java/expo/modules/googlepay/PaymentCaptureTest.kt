@@ -13,6 +13,7 @@ import android.os.Build
 import android.service.notification.StatusBarNotification
 import org.json.JSONObject
 import org.junit.Assert.*
+import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -42,13 +43,31 @@ class PaymentCaptureTest {
     shadowOf(listener.packageManager).addResolveInfoForIntent(launch, resolved)
   }
 
-  private fun alert(id: Int = 1, packageName: String = "com.google.android.gms", channel: String = "wallet", lines: Boolean = false): StatusBarNotification {
+  @After fun teardown() { listener.onDestroy() }
+
+  private fun alert(id: Int = 1, packageName: String = "com.google.android.gms", channel: String = "wallet", lines: Boolean = false, title: String = "Google Wallet", text: String = "You paid €12.50 at Cafe"): StatusBarNotification {
     val builder = if (Build.VERSION.SDK_INT >= 26) Notification.Builder(listener, channel) else Notification.Builder(listener)
     val notification = builder.setSmallIcon(android.R.drawable.ic_menu_edit)
-      .setContentTitle("Google Wallet").setWhen(1700000000000L).build()
-    if (lines) notification.extras.putCharSequenceArray(Notification.EXTRA_TEXT_LINES, arrayOf("You paid €12.50 at Cafe"))
-    else notification.extras.putCharSequence(Notification.EXTRA_TEXT, "You paid €12.50 at Cafe")
+      .setContentTitle(title).setWhen(1700000000000L).build()
+    if (lines) notification.extras.putCharSequenceArray(Notification.EXTRA_TEXT_LINES, arrayOf(text))
+    else notification.extras.putCharSequence(Notification.EXTRA_TEXT, text)
     return StatusBarNotification(packageName, packageName, id, null, 1000, 0, 0, notification, Process.myUserHandle(), 1700000000000L)
+  }
+
+  @Test fun keepsPaymentTextWhenExpandedTextContainsOnlyCardDetails() {
+    val notification = alert(title = "Cafe", text = "You paid €12.50")
+    notification.notification.extras.putCharSequence(Notification.EXTRA_BIG_TEXT, "Visa •••• 1234")
+    listener.onNotificationPosted(notification)
+    assertEquals(12.5, PaymentStore.pending(listener).single().getDouble("amount"), 0.0)
+    assertEquals(1, shadowOf(manager).allNotifications.size)
+  }
+
+  @Test fun checksExpandedTextForFailureInsteadOfCapturingCollapsedPayment() {
+    val notification = alert()
+    notification.notification.extras.putCharSequence(Notification.EXTRA_BIG_TEXT, "Payment declined")
+    listener.onNotificationPosted(notification)
+    assertTrue(PaymentStore.pending(listener).isEmpty())
+    assertEquals("non_payment", PaymentStore.diagnostics(listener)["lastOutcome"])
   }
 
   @Test fun capturesPlayServicesPaymentAndPostsOneReminder() {
@@ -110,6 +129,55 @@ class PaymentCaptureTest {
     assertTrue(PaymentStore.pending(listener).isEmpty())
     listener.onNotificationPosted(alert(lines = true))
     assertEquals(1, PaymentStore.pending(listener).size)
+  }
+
+  @Test fun capturesMerchantLayoutFromUnbrandedPlayServicesChannel() {
+    listener.onNotificationPosted(alert(channel = "payments", title = "Shop-24", text = "CHF 12.50"))
+    val payment = PaymentStore.pending(listener).single()
+    assertEquals("CHF", payment.getString("currency"))
+    assertEquals(12.5, payment.getDouble("amount"), 0.0)
+    assertEquals("payment_saved", PaymentStore.diagnostics(listener)["lastOutcome"])
+    assertEquals("posted", PaymentStore.diagnostics(listener)["lastReminderOutcome"])
+    assertNotNull(PaymentStore.diagnostics(listener)["lastCapturedAt"])
+  }
+
+  @Test fun capturesSameAmountInDifferentTitleAndBody() {
+    listener.onNotificationPosted(alert(title = "You paid €12.50", text = "Payment amount €12.50 at Cafe"))
+    assertEquals(1, PaymentStore.pending(listener).size)
+    assertEquals(1, shadowOf(manager).allNotifications.size)
+  }
+
+  @Test fun diagnosticsExplainRejectedAlertsWithoutRetainingTheirContents() {
+    listener.onNotificationPosted(alert(channel = "play_store", title = "Google Play"))
+    assertEquals("source_filtered", PaymentStore.diagnostics(listener)["lastOutcome"])
+    listener.onNotificationPosted(alert(text = "You paid €12.50 total €15.00"))
+    assertEquals("ambiguous_amount", PaymentStore.diagnostics(listener)["lastOutcome"])
+    assertTrue(PaymentStore.pending(listener).isEmpty())
+    assertFalse(listener.getSharedPreferences("google_pay", Context.MODE_PRIVATE).all.values.any { it.toString().contains("15.00") })
+    listener.onNotificationPosted(alert(packageName = "com.example.bank"))
+    assertEquals("ambiguous_amount", PaymentStore.diagnostics(listener)["lastOutcome"])
+  }
+
+  @Test fun duplicateRetriesReminderAfterPermissionRestored() {
+    shadowOf(RuntimeEnvironment.getApplication()).denyPermissions(Manifest.permission.POST_NOTIFICATIONS)
+    listener.onNotificationPosted(alert())
+    assertEquals("permission_blocked", PaymentStore.diagnostics(listener)["lastReminderOutcome"])
+    shadowOf(RuntimeEnvironment.getApplication()).grantPermissions(Manifest.permission.POST_NOTIFICATIONS)
+    listener.onNotificationPosted(alert())
+    assertEquals("posted", PaymentStore.diagnostics(listener)["lastReminderOutcome"])
+    assertEquals(1, PaymentStore.pending(listener).size)
+    assertEquals(1, shadowOf(manager).allNotifications.size)
+  }
+
+  @Test fun connectionStatusTracksActualListenerLifecycle() {
+    assertFalse(PaymentNotificationListener.isConnected())
+    listener.onListenerConnected()
+    assertTrue(PaymentNotificationListener.isConnected())
+    listener.onListenerDisconnected()
+    assertFalse(PaymentNotificationListener.isConnected())
+    listener.onListenerConnected()
+    listener.onDestroy()
+    assertFalse(PaymentNotificationListener.isConnected())
   }
 
   @Test fun keepsDraftsWhenDisabledAndBeyondOldQueueLimit() {

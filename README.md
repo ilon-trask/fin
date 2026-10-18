@@ -182,12 +182,15 @@ keeps pending drafts. Drafts remain until saved or explicitly dismissed, without
 queue-size expiry.
 
 This uses Android notification access, not a Google transaction-history API. Google
-Pay/Wallet packages and Wallet-identified notifications delivered by Google Play
-services are processed. Matching alerts stay on-device; other apps' notification
-contents are not stored. Detection currently supports English/German outgoing payment wording, amount-at-merchant purchase alerts, and EUR/USD/GBP/INR amounts.
+Pay/Wallet packages and Wallet-identified or payment-channel notifications delivered
+by Google Play services are processed. Matching alerts stay on-device; other apps' notification
+contents are not stored. Detection supports English/German/Russian/French outgoing payment wording,
+amount-at-merchant alerts, and merchant-title/amount-body alerts. ISO currency codes
+(including CHF and PLN) and €, $, £, ₹, ₽ and ₴ are recognized. Three-decimal
+currencies such as KWD retain their fractional amounts.
 Payments without a readable matching notification cannot be detected. Failed
-payments, refunds, requests, offers and alerts containing multiple amounts are
-skipped. Currencies are preserved and totals are shown separately by currency; older
+payments, refunds, requests, offers and alerts containing different amounts or
+currencies are skipped. Repeated occurrences of the same amount/currency are accepted. Currencies are preserved and totals are shown separately by currency; older
 expenses without a currency retain their separate total.
 
 Verification on an Android device:
@@ -204,7 +207,20 @@ Verification on an Android device:
 The listener scans still-active Wallet alerts after reconnecting. Enable purchase
 notifications in Google Wallet; Fin cannot detect a payment if Wallet never issues a
 readable alert. Fin Settings also checks whether the payment notification channel is
-blocked.
+blocked. It shows READY only when notification access, Fin notifications and the
+live listener connection are all available. SETUP, BLOCKED and WAITING explain
+incomplete setup, notification permissions and a disconnected listener. Use
+Reconnect reminders to request a connection again.
+
+Settings shows the last Google alert's time and capture outcome, last saved payment
+time, and last reminder-posting outcome. Diagnostics store only timestamps and
+outcome codes; rejected notification contents are not retained. If a payment is
+saved but its reminder is blocked, restore notification permission and reopen Fin
+or wait for a repeated alert to retry. Android accepting a reminder does not prove
+that it displayed a banner or played a sound.
+
+These changes include native Kotlin code: build and install an updated Android APK;
+reloading JavaScript alone will not update capture behavior.
 
 Android capture, persistence and parser tests: after
 `npx expo prebuild --platform android`, run

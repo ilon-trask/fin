@@ -7,6 +7,23 @@ import org.json.JSONObject
 
 object PaymentStore {
   private fun prefs(context: Context) = context.getSharedPreferences("google_pay", Context.MODE_PRIVATE)
+  fun diagnostics(context: Context): Map<String, Any?> = mapOf(
+    "lastEventAt" to prefs(context).getLong("last_event_at", 0L).takeIf { it > 0 },
+    "lastOutcome" to prefs(context).getString("last_outcome", null),
+    "lastCapturedAt" to prefs(context).getLong("last_captured_at", 0L).takeIf { it > 0 },
+    "lastReminderOutcome" to prefs(context).getString("last_reminder_outcome", null))
+
+  @Synchronized fun recordEvent(context: Context, at: Long, outcome: String) {
+    if (at < prefs(context).getLong("last_event_at", 0L)) return
+    prefs(context).edit().putLong("last_event_at", at).putString("last_outcome", outcome).apply()
+  }
+  fun recordCapture(context: Context) {
+    prefs(context).edit().putLong("last_captured_at", System.currentTimeMillis()).apply()
+  }
+  fun recordReminder(context: Context, outcome: String) {
+    prefs(context).edit().putString("last_reminder_outcome", outcome).apply()
+  }
+
   fun enabled(context: Context) = prefs(context).getBoolean("enabled", false)
   @Synchronized fun setEnabled(context: Context, enabled: Boolean) {
     prefs(context).edit().putBoolean("enabled", enabled).apply()

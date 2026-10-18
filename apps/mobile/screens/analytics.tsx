@@ -1,3 +1,4 @@
+import { formatAmount } from "@/utils/money";
 import ThemedText from "@/components/ui/themed-text";
 import { TopBar, TopBarButton } from "@/components/ui/top-bar";
 import { COLOR, SCREEN_LAYOUT } from "@/constants/tokens";
@@ -51,7 +52,7 @@ export default function Analytics({ active, onBack }: { active: boolean; onBack:
   const categoriesById = useMemo(() => new Map(categories.map((category) => [category.id, category])), [categories]);
   const currencies = useMemo(() => [...new Set(expenses.map((item) => item.currency ?? ""))], [expenses]);
   const selectedCurrency = currencies.includes(currency) ? currency : (currencies[0] ?? "");
-  const money = (amount: number) => `${selectedCurrency ? `${selectedCurrency} ` : ""}${amount.toFixed(2)}`;
+  const money = (amount: number) => `${selectedCurrency ? `${selectedCurrency} ` : ""}${formatAmount(amount, selectedCurrency)}`;
   const now = new Date();
   const monthLabel = selectedMonth.toLocaleString("default", { month: "long", year: "numeric" });
   const isCurrentMonth = selectedMonth.getFullYear() === now.getFullYear() && selectedMonth.getMonth() === now.getMonth();
@@ -154,7 +155,7 @@ export default function Analytics({ active, onBack }: { active: boolean; onBack:
               <View style={styles.chart}>
                 {trend.map((item, index) => (
                   <View key={index} style={styles.column} accessible accessibilityLabel={`${item.accessibleLabel}: ${money(item.amount)}`}>
-                    <ThemedText style={styles.chartValue} numberOfLines={1} adjustsFontSizeToFit>{item.amount.toFixed(2)}</ThemedText>
+                    <ThemedText style={styles.chartValue} numberOfLines={1} adjustsFontSizeToFit>{formatAmount(item.amount, selectedCurrency)}</ThemedText>
                     <View style={styles.barTrack}><View style={[styles.bar, { height: item.amount ? Math.max(3, item.amount / maxTrend * 100) : 2, backgroundColor: index === 5 ? COLOR.primary : COLOR.secondary }]} /></View>
                     <ThemedText style={styles.caption}>{item.label}</ThemedText>
                   </View>

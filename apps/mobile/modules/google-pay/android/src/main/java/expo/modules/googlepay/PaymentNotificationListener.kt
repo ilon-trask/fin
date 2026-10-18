@@ -27,6 +27,8 @@ class PaymentNotificationListener : NotificationListenerService() {
     const val CHANNEL_ID = "google-pay-payments"
     @Volatile private var connected = WeakReference<PaymentNotificationListener>(null)
 
+    fun isConnected() = connected.get() != null
+
     fun refresh(context: Context) {
       if (!PaymentStore.enabled(context)) return
       val listener = connected.get()
@@ -62,34 +64,64 @@ class PaymentNotificationListener : NotificationListenerService() {
 
   override fun onNotificationPosted(sbn: StatusBarNotification) {
     if (!PaymentStore.enabled(this)) return
+    if (!PaymentSource.isCandidate(sbn.packageName)) return
     if (sbn.notification.flags and Notification.FLAG_GROUP_SUMMARY != 0) return
     val extras = sbn.notification.extras
     val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty()
     val bigText = extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString().orEmpty()
     val lines = extras.getCharSequenceArray(Notification.EXTRA_TEXT_LINES)?.joinToString("\n").orEmpty()
-    val body = bigText.ifBlank { lines }.ifBlank { extras.getCharSequence(Notification.EXTRA_TEXT)?.toString().orEmpty() }
-    val description = listOf(title, body).filter { it.isNotBlank() }.distinct().joinToString("\n")
-    if (!PaymentSource.accepts(sbn.packageName, if (Build.VERSION.SDK_INT >= 26) sbn.notification.channelId else null, extras.getCharSequence("android.substName")?.toString().orEmpty(), description)) return
-    val parsed = PaymentParser.parse(description) ?: return
+    val text = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString().orEmpty()
+    // Expanded content can contain only card details while the collapsed text
+    // holds the payment. Keep both, including failure/refund wording in either.
+    val description = listOf(title, text, bigText, lines).filter { it.isNotBlank() }.distinct().joinToString("\n")
+    if (!PaymentSource.accepts(sbn.packageName, if (Build.VERSION.SDK_INT >= 26) sbn.notification.channelId else null, extras.getCharSequence("android.substName")?.toString().orEmpty(), description)) {
+      // Only retain an outcome, never the content of rejected notifications.
+      PaymentStore.recordEvent(this, sbn.postTime, "source_filtered")
+      return
+    }
+    val result = PaymentParser.inspect(description)
+    val parsed = result.payment ?: run {
+      PaymentStore.recordEvent(this, sbn.postTime, result.reason ?: "unrecognized_format")
+      return
+    }
     // Stable across notification updates; changed amounts under the same key are distinct.
     val source = "${sbn.key}|${sbn.notification.`when`}|${parsed.first}|${parsed.second}"
     val id = MessageDigest.getInstance("SHA-256").digest(source.toByteArray()).joinToString("") { "%02x".format(it) }
     val payment = JSONObject().put("id", id).put("amount", parsed.first).put("currency", parsed.second)
       .put("date", java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.US).apply { timeZone = java.util.TimeZone.getTimeZone("UTC") }.format(java.util.Date(sbn.postTime))).put("description", description)
-    if (PaymentStore.add(this, payment)) postReminder(payment)
+    if (PaymentStore.add(this, payment)) {
+      PaymentStore.recordEvent(this, sbn.postTime, "payment_saved")
+      PaymentStore.recordCapture(this)
+      postReminder(payment)
+    } else {
+      // A repeated alert can also arrive after permission has been restored.
+      PaymentStore.pending(this).firstOrNull { it.getString("id") == id && !it.optBoolean("notified") }?.let { postReminder(it) }
+    }
   }
 
   private fun postReminder(payment: JSONObject) {
     if (!PaymentStore.enabled(this)) return
-    if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return
-    if (!NotificationManagerCompat.from(this).areNotificationsEnabled()) return
+    if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+      PaymentStore.recordReminder(this, "permission_blocked")
+      return
+    }
+    if (!NotificationManagerCompat.from(this).areNotificationsEnabled()) {
+      PaymentStore.recordReminder(this, "permission_blocked")
+      return
+    }
     val manager = getSystemService(NotificationManager::class.java)
     if (Build.VERSION.SDK_INT >= 26) {
       manager.createNotificationChannel(NotificationChannel(CHANNEL_ID, "Google Pay payments", NotificationManager.IMPORTANCE_HIGH))
-      if (manager.getNotificationChannel(CHANNEL_ID)?.importance == NotificationManager.IMPORTANCE_NONE) return
+      if (manager.getNotificationChannel(CHANNEL_ID)?.importance == NotificationManager.IMPORTANCE_NONE) {
+        PaymentStore.recordReminder(this, "channel_blocked")
+        return
+      }
     }
     val id = payment.getString("id")
-    val intent = packageManager.getLaunchIntentForPackage(packageName) ?: return
+    val intent = packageManager.getLaunchIntentForPackage(packageName) ?: run {
+      PaymentStore.recordReminder(this, "launch_unavailable")
+      return
+    }
     intent.action = Intent.ACTION_VIEW
     intent.data = Uri.parse("finsam://?paymentId=$id")
     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
@@ -103,7 +135,9 @@ class PaymentNotificationListener : NotificationListenerService() {
     try {
       manager.notify(id, 1, notification)
       PaymentStore.markNotified(this, id)
+      PaymentStore.recordReminder(this, "posted")
     } catch (_: SecurityException) {
+      PaymentStore.recordReminder(this, "permission_blocked")
       // Draft remains available and posting can be retried after permission is restored.
     }
   }

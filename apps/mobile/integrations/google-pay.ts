@@ -12,6 +12,11 @@ interface Status {
   enabled: boolean;
   accessGranted: boolean;
   notificationsGranted: boolean;
+  listenerConnected: boolean;
+  lastEventAt: number | null;
+  lastOutcome: string | null;
+  lastCapturedAt: number | null;
+  lastReminderOutcome: string | null;
 }
 interface GooglePayNative {
   getStatus(): Status;
@@ -27,7 +32,11 @@ const native = Platform.OS === "android"
 
 export const googlePay = {
   available: !!native,
-  status: (): Status => native?.getStatus() ?? { enabled: false, accessGranted: false, notificationsGranted: false },
+  status: (): Status => ({
+    enabled: false, accessGranted: false, notificationsGranted: false, listenerConnected: false,
+    lastEventAt: null, lastOutcome: null, lastCapturedAt: null, lastReminderOutcome: null,
+    ...native?.getStatus(),
+  }),
   pending: (): PaymentDraft[] => (native?.getPending() ?? []).flatMap((raw) => {
     try {
       const payment = JSON.parse(raw);

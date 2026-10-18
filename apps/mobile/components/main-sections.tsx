@@ -1,3 +1,4 @@
+import { formatAmount } from "@/utils/money";
 import { useMemo, useState } from "react";
 import { Pressable, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
@@ -44,6 +45,7 @@ export function MainOverview({
     return result;
   }, Object.create(null)), [expenses]);
   const totalEntries = Object.entries(totals);
+  const displayedTotals: [string, number][] = totalEntries.length ? totalEntries : [["", 0]];
 
   return (
     <View style={styles.overview} onLayout={(event) => onHeightChange(event.nativeEvent.layout.height)}>
@@ -64,10 +66,10 @@ export function MainOverview({
             </ThemedText>
           </View>
         </View>
-        {(totalEntries.length ? totalEntries : [["", 0]]).map(([currency, total]) => (
+        {displayedTotals.map(([currency, total]) => (
           <View key={currency} style={styles.totalRow}>
             {!!currency && <ThemedText style={styles.currency}>{currency}</ThemedText>}
-            <ThemedText style={styles.total}>{Number(total).toFixed(2)}</ThemedText>
+            <ThemedText style={styles.total}>{formatAmount(total, currency)}</ThemedText>
           </View>
         ))}
       </View>
@@ -76,7 +78,7 @@ export function MainOverview({
         <View key={payment.id} style={styles.payment}>
           <View style={styles.sectionRow}>
             <ThemedText style={styles.rowTitle}>Google Pay</ThemedText>
-            <ThemedText>{payment.currency} {payment.amount.toFixed(2)}</ThemedText>
+            <ThemedText>{payment.currency} {formatAmount(payment.amount, payment.currency)}</ThemedText>
           </View>
           <ThemedText style={styles.subtitle}>{payment.description}</ThemedText>
           <View style={styles.actionRow}>
@@ -167,7 +169,7 @@ export function RecentExpenses({ expenses, categories, onEdit }: RecentExpensesP
                 {items.map((expense) => {
                   const category = categoriesById.get(expense.categoryId);
                   const categoryName = category?.name ?? "Uncategorized";
-                  const amount = `${expense.currency ? `${expense.currency} ` : ""}${expense.amount.toFixed(2)}`;
+                  const amount = `${expense.currency ? `${expense.currency} ` : ""}${formatAmount(expense.amount, expense.currency)}`;
                   return (
                     <Pressable key={expense.id} accessibilityRole="button"
                       accessibilityLabel={`Edit ${categoryName} expense, ${amount}, ${date}`}

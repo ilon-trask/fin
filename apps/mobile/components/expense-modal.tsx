@@ -1,3 +1,4 @@
+import { amountFractionDigits } from "@/utils/money";
 import { Category, Expense } from "@/types/entities";
 import { COLOR } from "@/constants/tokens";
 import React, { useEffect, useRef, useState } from "react";
@@ -88,7 +89,7 @@ function ExpenseModal({
           onSubmitEditing={() => canSave && onSave(localExpense)}
           value={amountText}
           onChangeText={(text) => {
-            if (!/^\d*(?:[.,]\d{0,2})?$/.test(text)) return;
+            if (!new RegExp(`^\\d*(?:[.,]\\d{0,${amountFractionDigits(localExpense.currency)}})?$`).test(text)) return;
             setAmountText(text);
             const amount = Number(text.replace(",", "."));
             setLocalExpense((prev) => ({ ...prev, amount }));
