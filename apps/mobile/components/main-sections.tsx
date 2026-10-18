@@ -150,11 +150,6 @@ export function RecentExpenses({ expenses, categories, onEdit }: RecentExpensesP
 
   return (
     <View style={styles.section}>
-      <View style={styles.sheetHandle} />
-      <View style={styles.sectionRow}>
-        <ThemedText style={styles.sectionTitle}>Recent expenses</ThemedText>
-        <ThemedText style={styles.count}>{expenses.length}</ThemedText>
-      </View>
       {expenses.length === 0 ? (
         <View style={styles.empty}>
           <View style={styles.emptyIcon}><Feather name="list" size={20} color={COLOR.muted} /></View>

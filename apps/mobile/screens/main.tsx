@@ -1,5 +1,7 @@
 import CategoryModal from "@/components/category-modal";
 import ExpenseModal from "@/components/expense-modal";
+import ThemedText from "@/components/ui/themed-text";
+import { Feather } from "@expo/vector-icons";
 import { COLOR } from "@/constants/tokens";
 import { getDefaultCategoryColor } from "@/constants/category-colors";
 import { StorageKeyKind, storageRead, storageUpsert, subscribeStorage } from "@/data/storage";
@@ -15,6 +17,7 @@ import {
   Alert,
   Animated,
   AppState,
+  Pressable,
   StyleSheet,
   View,
 } from "react-native";
@@ -53,7 +56,7 @@ export default function Main({ onSettings, onAnalytics, onDialogOpenChange }: {
   });
   const [expenses, setExpenses] = useState<Expense[]>([]);
 
-  const { scrollY, expenseSheet, listOffset, expensesExpanded, sheetTravel, sheetGesture } = useExpenseSheet(
+  const { scrollY, expenseSheet, expenseList, listOffset, expensesExpanded, sheetTravel, sheetGesture, settleSheet } = useExpenseSheet(
     overviewHeight,
     viewportHeight,
     showExpenseModal || showCategoryModal,
@@ -232,11 +235,27 @@ export default function Main({ onSettings, onAnalytics, onDialogOpenChange }: {
         </View>
         <Animated.View ref={expenseSheet} testID="recent-expenses" {...sheetGesture.panHandlers}
           style={[styles.expenseSheet, { height: viewportHeight, transform: [{ translateY: Animated.subtract(sheetTravel, scrollY) }] }]}>
-          <Animated.ScrollView scrollEnabled={expensesExpanded}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={expensesExpanded ? "Close expenses" : "Open expenses"}
+            accessibilityState={{ expanded: expensesExpanded }}
+            onPress={() => settleSheet(!expensesExpanded)}
+            style={({ pressed }) => [styles.sheetHeader, pressed && { opacity: 0.7 }]}
+          >
+            <View style={styles.sheetHandle} />
+            <View style={styles.sectionRow}>
+              <ThemedText style={styles.sectionTitle}>Recent expenses</ThemedText>
+              <View style={styles.sheetHeaderActions}>
+                <ThemedText style={styles.count}>{expenses.length}</ThemedText>
+                <Feather name={expensesExpanded ? "chevron-down" : "chevron-up"} size={20} color={COLOR.muted} />
+              </View>
+            </View>
+          </Pressable>
+          <Animated.ScrollView ref={expenseList} scrollEnabled={expensesExpanded}
             showsVerticalScrollIndicator={false} scrollEventThrottle={16}
             onScroll={(event) => { listOffset.current = event.nativeEvent.contentOffset.y; }}>
             <View
-              style={[styles.scrollingContent, { minHeight: viewportHeight, paddingBottom: 32 + insets.bottom }]}>
+              style={[styles.scrollingContent, { paddingBottom: 32 + insets.bottom }]}>
               <RecentExpenses expenses={expenses} categories={categories} onEdit={editExpense} />
             </View>
           </Animated.ScrollView>

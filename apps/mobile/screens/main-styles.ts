@@ -8,6 +8,8 @@ export const styles = StyleSheet.create({
   content: { width: "100%", maxWidth: 600, alignSelf: "center" },
   expenseSheet: { position: "absolute", top: 0, width: "100%", maxWidth: 600, alignSelf: "center", zIndex: 1 },
   sheetHandle: { width: 32, height: 3, borderRadius: 2, backgroundColor: COLOR.muted, alignSelf: "center", marginBottom: 2 },
+  sheetHeader: { paddingHorizontal: 24, paddingTop: 8, paddingBottom: 14, gap: 14 },
+  sheetHeaderActions: { flexDirection: "row", alignItems: "center", gap: 10 },
   overview: { ...SCREEN_LAYOUT, paddingBottom: 28, backgroundColor: COLOR.bg, zIndex: 0 },
   scrollingContent: { paddingHorizontal: 24, paddingBottom: 32, gap: 28, backgroundColor: "transparent", zIndex: 1 },
   brand: { fontSize: 22, fontWeight: "800", letterSpacing: -1 },

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Animated, PanResponder, Platform, View } from "react-native";
+import { Animated, PanResponder, Platform, ScrollView, View } from "react-native";
 
 const MIN_VISIBLE_OVERVIEW_HEIGHT = 100;
 const DRAG_THRESHOLD = 10;
@@ -10,6 +10,7 @@ export function useExpenseSheet(overviewHeight: number, viewportHeight: number, 
   const [scrollY] = useState(() => new Animated.Value(0));
   const [expensesExpanded, setExpensesExpanded] = useState(false);
   const expenseSheet = useRef<View>(null);
+  const expenseList = useRef<ScrollView>(null);
   const sheetPosition = useRef(0);
   const dragStart = useRef(0);
   const listOffset = useRef(0);
@@ -23,6 +24,10 @@ export function useExpenseSheet(overviewHeight: number, viewportHeight: number, 
 
   const settleSheet = useCallback((expanded: boolean) => {
     setExpensesExpanded(false);
+    if (!expanded) {
+      expenseList.current?.scrollTo({ y: 0, animated: false });
+      listOffset.current = 0;
+    }
     Animated.spring(scrollY, {
       toValue: expanded ? sheetTravel : 0,
       stiffness: 260,
@@ -80,5 +85,5 @@ export function useExpenseSheet(overviewHeight: number, viewportHeight: number, 
     return () => element.removeEventListener("wheel", onWheel);
   }, [expensesExpanded, settleSheet]);
 
-  return { scrollY, expenseSheet, listOffset, expensesExpanded, sheetTravel, sheetGesture };
+  return { scrollY, expenseSheet, expenseList, listOffset, expensesExpanded, sheetTravel, sheetGesture, settleSheet };
 }
